@@ -1,0 +1,24 @@
+{% load static office_tags %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Print{% endblock %} · {{ school.name }}</title>
+  <link rel="icon" href="{% static 'img/school_logo_small.png' %}">
+  <link rel="stylesheet" href="{% vstatic 'css/print.css' %}">
+  <style>:root { --logo: url("{{ logo_url }}"); }</style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="toolbar">
+  <button class="primary" type="button" onclick="window.print()">Print / Save as PDF</button>
+  <a href="{% block back_fallback %}{% url 'office:dashboard' %}{% endblock %}" data-back>&larr; Back</a>
+  {% block toolbar %}{% endblock %}
+  <span class="tip">To send on WhatsApp: Print → choose “Save as PDF” → attach the PDF.</span>
+</div>
+{# The school logo, printed faintly behind every page #}
+<div class="watermark-print" aria-hidden="true"><img src="{{ logo_url }}" alt=""></div>
+{% block sheets %}{% endblock %}
+<script src="{% vstatic 'js/app.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<div class="table-responsive register-wrap">
+  <table class="table register mb-0">
+    <thead><tr>
+      <th class="who">{% if teachers %}Teacher{% else %}Student{% endif %}</th>
+      {% for d in days %}<th class="d {% if d.weekday == 6 %}sun{% endif %}">{{ d.day }}<small>{{ d|date:"D"|slice:":2" }}</small></th>{% endfor %}
+      <th class="n">P</th><th class="n">A</th><th class="n">L</th><th class="n">%</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="who">{% if not teachers and r.p.roll_no %}<span class="text-muted">{{ r.p.roll_no }}.</span> {% endif %}{{ r.p.name }}</td>
+        {% for c in r.cells %}<td class="d {% if c.sun %}sun{% endif %}">{% if c.s %}<span class="m m-{{ c.s }}">{{ c.s }}</span>{% endif %}</td>{% endfor %}
+        <td class="n">{{ r.present }}</td><td class="n">{{ r.absent|default:"" }}</td><td class="n">{{ r.leave|default:"" }}</td>
+        <td class="n"><b>{% if r.percent is not None %}{{ r.percent }}%{% else %}–{% endif %}</b></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="40"><div class="empty">Nobody to show.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="register-key small text-muted mt-2"><span class="m m-P">P</span> Present <span class="m m-A">A</span> Absent <span class="m m-L">L</span> Leave {% if teachers %}<span class="m m-T">T</span> Late (counts as present) {% endif %}· Sundays are grey · empty = not marked</div>

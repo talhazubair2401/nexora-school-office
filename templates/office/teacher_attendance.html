@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Teacher attendance{% endblock %}
+{% block back_fallback %}{% url 'office:attendance_home' %}?date={{ day|date:'Y-m-d' }}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:attendance_home' %}?date={{ day|date:'Y-m-d' }}">Attendance</a><span>Teachers</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Teacher attendance <span class="text-muted fw-normal fs-5">· {{ day|date:"l j F Y" }}</span></h1>
+  <a class="btn btn-light" href="?date={{ prev_day|date:'Y-m-d' }}" aria-label="Previous day"><i class="bi bi-chevron-left"></i></a>
+  <form method="get" data-autosubmit><input class="form-control" type="date" name="date" value="{{ day|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" aria-label="Date"></form>
+  {% if next_day %}<a class="btn btn-light" href="?date={{ next_day|date:'Y-m-d' }}" aria-label="Next day"><i class="bi bi-chevron-right"></i></a>{% endif %}
+  <a class="btn btn-light" href="{% url 'office:teacher_attendance_month' %}?month={{ day|date:'Y-m' }}"><i class="bi bi-table me-1"></i>Monthly register</a>
+</div>
+{% if is_sunday %}<div class="alert alert-info py-2"><i class="bi bi-info-circle me-1"></i>This day is a Sunday.</div>{% endif %}
+{% if rows %}
+<form method="post" data-warn>{% csrf_token %}<input type="hidden" name="date" value="{{ day|date:'Y-m-d' }}">
+  <p class="text-muted">Everyone starts as <b>Present</b>. Change only those who are absent, on leave or late.{% if already %} <b>Already marked</b> — you can change it.{% endif %}</p>
+  <section class="panel">
+    {% for r in rows %}
+    <div class="att-row" data-att-row>
+      <span class="who-dot staff" aria-hidden="true">{{ r.t.name|first|upper }}</span>
+      <div class="att-name"><b>{{ r.t.name }}</b><small>{{ r.t.subjects|default:"" }}{% if r.month.marked %}{% if r.t.subjects %} · {% endif %}{{ month|date:"F" }}: {{ r.month.present }}/{{ r.month.marked }} present{% if r.month.leave %}, {{ r.month.leave }} leave{% endif %}{% if r.month.absent %}, {{ r.month.absent }} absent{% endif %}{% if r.month.late %}, {{ r.month.late }} late{% endif %}{% endif %}</small></div>
+      <div class="att-choices" role="radiogroup" aria-label="Attendance for {{ r.t.name }}">
+        {% for v, label in choices %}
+          <input class="btn-check" type="radio" name="t{{ r.t.pk }}" id="t{{ r.t.pk }}{{ v }}" value="{{ v }}" {% if r.status == v %}checked{% endif %} autocomplete="off">
+          <label class="btn att-btn att-{{ v }}" for="t{{ r.t.pk }}{{ v }}">{{ label }}</label>
+        {% endfor %}
+      </div>
+      <input class="form-control form-control-sm att-note" name="n{{ r.t.pk }}" value="{{ r.note }}" placeholder="Note (optional)" aria-label="Note for {{ r.t.name }}">
+    </div>
+    {% endfor %}
+  </section>
+  <div class="att-savebar"><span>Teachers · {{ day|date:"d M Y" }}</span><button class="btn btn-primary btn-lg ms-auto" type="submit"><i class="bi bi-check-lg me-1"></i>Save</button></div>
+</form>
+{% else %}
+<div class="panel empty"><i class="bi bi-person-badge"></i>No working teachers in the records yet.</div>
+{% endif %}
+{% endblock %}

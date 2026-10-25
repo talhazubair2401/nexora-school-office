@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}{{ t.name }}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:teacher_list' %}">Teachers</a><span>{{ t.name }}</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <div class="me-auto">
+    <h1 class="page-title">{{ t.name }}</h1>
+    <div class="text-muted">{{ t.subjects|default:"" }}{% if t.qualification %} · {{ t.qualification }}{% endif %}</div>
+  </div>
+  <span class="chip chip-{{ t.status }}">{{ t.get_status_display }}</span>
+  <div class="dropdown">
+    <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-award me-1"></i>Certificate</button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><a class="dropdown-item" href="{% url 'office:certificate_new' 'EXP' %}?teacher={{ t.pk }}">Experience Certificate</a></li>
+      <li><a class="dropdown-item" href="{% url 'office:certificate_new' 'REL' %}?teacher={{ t.pk }}">Relieving Letter</a></li>
+      <li><a class="dropdown-item" href="{% url 'office:certificate_new' 'APP' %}?teacher={{ t.pk }}">Appreciation Letter</a></li>
+    </ul>
+  </div>
+  <a class="btn btn-primary" href="{% url 'office:teacher_update' t.pk %}"><i class="bi bi-pencil me-1"></i>Edit</a>
+</div>
+<div class="row g-3">
+  <div class="col-lg-5">
+    <section class="panel panel-body mb-3"><dl class="detail-list">
+      <dt>Father's name</dt><dd>{{ t.father_name|default:"–" }}</dd>
+      <dt>CNIC</dt><dd>{{ t.cnic|default:"–" }}</dd>
+      <dt>Phone</dt><dd>{{ t.phone|default:"–" }}</dd>
+      <dt>Address</dt><dd>{{ t.address|default:"–" }}</dd>
+      <dt>Qualification</dt><dd>{{ t.qualification|default:"–" }}</dd>
+      <dt>Subjects taught</dt><dd>{{ t.subjects|default:"–" }}</dd>
+      <dt>Joining date</dt><dd>{{ t.joining_date|date:"d M Y"|default:"–" }}</dd>
+      <dt>Monthly salary</dt><dd class="fw-bold">{{ t.salary|rs }}</dd>
+      {% if t.left_on %}<dt>Left on</dt><dd>{{ t.left_on|date:"d M Y" }}</dd>{% endif %}
+      {% if classes %}<dt>Class teacher of</dt><dd>{% for c in classes %}{{ c }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd>{% endif %}
+      {% if t.remarks %}<dt>Remarks</dt><dd>{{ t.remarks|linebreaksbr }}</dd>{% endif %}
+    </dl></section>
+    {% if certificates %}<section class="panel mb-3"><div class="panel-head"><h2>Certificates issued</h2></div>
+      <ul class="list-group list-group-flush">{% for c in certificates %}<li class="list-group-item d-flex justify-content-between align-items-center"><span>{{ c.get_kind_display }}<small class="d-block text-muted">{{ c.serial_no }} · {{ c.issued_on|date:"d M Y" }}</small></span><a class="btn btn-sm btn-light" href="{% url 'office:certificate_print' c.pk %}"><i class="bi bi-printer"></i></a></li>{% endfor %}</ul>
+    </section>{% endif %}
+  </div>
+  <div class="col-lg-7">
+    <section class="panel">
+      <div class="panel-head"><h2>Salary record</h2><span class="small text-muted">Paid in total: {{ paid_total|rs }}</span></div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Month</th><th class="money">Salary</th><th class="money">Paid</th><th>Paid on</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+          {% for s in salaries %}
+            <tr>
+              <td class="fw-semibold">{{ s.month|date:"F Y" }}</td><td class="money">{{ s.amount|rs }}</td><td class="money">{{ s.paid_amount|rs }}</td>
+              <td>{{ s.paid_on|date:"d M Y"|default:"–" }}</td><td><span class="chip chip-{{ s.status }}">{{ s.status_label }}</span></td>
+              <td class="text-end text-nowrap">
+                <a class="btn btn-sm btn-light" href="{% url 'office:salary_slip' s.pk %}"><i class="bi bi-printer me-1"></i>Slip</a>
+                <a class="btn btn-sm btn-light" href="{% url 'office:salary_edit' s.pk %}?next={{ request.path|urlencode }}" aria-label="Edit"><i class="bi bi-pencil"></i></a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6"><div class="empty"><i class="bi bi-wallet2"></i>No salary months yet. Create them on the Salaries page.</div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

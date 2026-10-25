@@ -1,0 +1,28 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Salary slip {{ t.name }} {{ s.month|date:"F Y" }}{% endblock %}
+{% block head %}<style>@page { size: A5 portrait; margin: 8mm; }</style>{% endblock %}
+{% block sheets %}
+<div class="sheet a5">
+  {% include "print/_head.html" %}
+  <div class="doc-title">SALARY SLIP — {{ s.month|date:"F Y"|upper }}</div>
+  <table class="info">
+    <tr><td class="k">Slip no.</td><td class="v">{{ s.slip_no }}</td><td class="k">Month</td><td class="v">{{ s.month|date:"F Y" }}</td></tr>
+    <tr><td class="k">Name</td><td class="v" colspan="3">{{ t.name }}</td></tr>
+    <tr><td class="k">Father's name</td><td class="v" colspan="3">{{ t.father_name }}</td></tr>
+    <tr><td class="k">CNIC</td><td class="v">{{ t.cnic }}</td><td class="k">Subjects</td><td class="v">{{ t.subjects }}</td></tr>
+  </table>
+  <table class="grid" style="margin-top:10px">
+    <tbody>
+      <tr><td>Monthly salary</td><td class="n">{{ t.salary|rs }}</td></tr>
+      {% if s.amount != t.salary %}<tr><td>Salary for {{ s.month|date:"F" }}{% if s.note %} ({{ s.note }}){% endif %}</td><td class="n">{{ s.amount|rs }}</td></tr>{% endif %}
+      <tr><td>Paid</td><td class="n">{{ s.paid_amount|rs }}</td></tr>
+      <tr><td>Balance</td><td class="n">{{ s.balance|rs }}</td></tr>
+    </tbody>
+  </table>
+  <div class="total-box {% if s.status != 'PAID' %}due{% endif %}"><span>{% if s.status == "PAID" %}Amount paid{% else %}Amount still to pay{% endif %}</span><span>{% if s.status == "PAID" %}{{ s.paid_amount|rs }}{% else %}{{ s.balance|rs }}{% endif %}</span></div>
+  {% if s.paid_amount %}<div class="words small">{% money_words s.paid_amount %}{% if s.paid_on %}, paid on {{ s.paid_on|date:"d-m-Y" }}{% endif %}.</div>{% endif %}
+  <div class="stamp-row"><div class="stamp {% if s.status == 'PAID' %}paid{% else %}unpaid{% endif %}">{% if s.status == "PAID" %}PAID{% elif s.status == "PART" %}PART PAID{% else %}UNPAID{% endif %}{% if s.paid_on %}<small>{{ s.paid_on|date:"d-m-Y" }}</small>{% endif %}</div></div>
+  <div class="sign"><div>Received by ({{ t.name }})</div><div>Principal</div></div>
+</div>
+{% endblock %}

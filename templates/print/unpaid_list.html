@@ -1,0 +1,22 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Unpaid fees {{ month|date:"F Y" }}{% endblock %}
+{% block sheets %}
+<div class="sheet">
+  {% include "print/_head.html" %}
+  <div class="doc-title" style="background:var(--red)">UNPAID FEES — {{ month|date:"F Y"|upper }}{% if classroom %} — {{ classroom.name|upper }}{% endif %}</div>
+  <table class="grid">
+    <thead><tr><th class="c">#</th><th>Student</th><th>Father</th><th>Class</th><th class="n">{{ month|date:"F" }} due</th><th class="n">Older dues</th><th class="n">Total due</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td class="c">{{ forloop.counter }}</td><td>{{ r.fee.student.name }}</td><td>{{ r.fee.student.father_name }}</td><td>{{ r.fee.student.classroom|default:"" }}</td>
+        <td class="n">{{ r.fee.balance|rs }}</td><td class="n">{% if r.arrears %}{{ r.arrears|rs }}{% else %}–{% endif %}</td><td class="n"><b>{{ r.fee.balance|add:r.arrears|rs }}</b></td></tr>
+    {% empty %}
+      <tr><td colspan="7" class="c">Everyone has paid.</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="6">Total to collect ({{ rows|length }} students)</td><td class="n">{{ total|rs }}</td></tr></tfoot>
+  </table>
+  <p class="small">Printed {% now "d-m-Y" %}.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "auth/_layout.html" %}
+{% block title %}Log in{% endblock %}
+{% block side_class %}vside{% endblock %}
+{% block side %}
+{% for m in messages %}<div class="vmsg vmsg-{{ m.tags|default:'info' }}" role="status"><i class="bi bi-{% if m.tags == 'danger' or m.tags == 'error' %}exclamation-circle{% else %}check-circle{% endif %} me-2"></i>{{ m }}</div>{% endfor %}
+<div class="vcard" id="vcard" data-role="{{ role }}">
+  <div class="vshape" aria-hidden="true"></div>
+
+  {# ---------- Owner ---------- #}
+  <form method="post" class="vpane vpane-owner" novalidate {% if role != "owner" %}inert{% endif %}>{% csrf_token %}
+    <input type="hidden" name="role" value="owner">
+    <span class="vhello">Assalam-o-Alaikum</span>
+    <h2 class="vtitle">Owner login</h2>
+    {% if error and role == "owner" %}<div class="verror" role="alert"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>{% endif %}
+    <label class="vfield" for="{{ owner_form.password.id_for_label }}"><span>Admin password</span>
+      <span class="vinput">{{ owner_form.password }}
+        <button class="veye" type="button" data-eye aria-label="Show or hide the password"><i class="bi bi-eye"></i></button></span>
+    </label>
+    <div class="vcaps" hidden><i class="bi bi-capslock-fill me-1"></i>Caps Lock is on</div>
+    <button class="vbtn" type="submit">Open the office <i class="bi bi-arrow-right"></i></button>
+    {% if has_staff %}<p class="vswitch">Office staff? <button type="button" data-to="staff">Sign in here</button></p>{% endif %}
+  </form>
+  <div class="vwelcome vwelcome-owner" aria-hidden="true">
+    <span class="vbig">WELCOME<br>BACK!</span>
+    <span class="vsmall">Principal, the whole school is one click away.</span>
+  </div>
+
+  {# ---------- Office staff ---------- #}
+  {% if has_staff %}
+  <form method="post" class="vpane vpane-staff" novalidate {% if role != "staff" %}inert{% endif %}>{% csrf_token %}
+    <input type="hidden" name="role" value="staff">
+    <span class="vhello">Assalam-o-Alaikum</span>
+    <h2 class="vtitle">Office staff</h2>
+    {% if error and role == "staff" %}<div class="verror" role="alert"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>{% endif %}
+    <label class="vfield" for="{{ staff_form.user.id_for_label }}"><span>Your name</span>
+      <span class="vinput">{{ staff_form.user }}<i class="bi bi-person vicon" aria-hidden="true"></i></span>
+    </label>
+    <label class="vfield" for="{{ staff_form.staff_password.id_for_label }}"><span>Password</span>
+      <span class="vinput">{{ staff_form.staff_password }}<i class="bi bi-lock vicon" aria-hidden="true"></i></span>
+    </label>
+    <div class="vcaps" hidden><i class="bi bi-capslock-fill me-1"></i>Caps Lock is on</div>
+    <button class="vbtn" type="submit">Open the office <i class="bi bi-arrow-right"></i></button>
+    <p class="vswitch">Owner? <button type="button" data-to="owner">Sign in here</button></p>
+  </form>
+  <div class="vwelcome vwelcome-staff" aria-hidden="true">
+    <span class="vbig">WELCOME!</span>
+    <span class="vsmall">Fees, attendance and receipts. Have a good day at work.</span>
+  </div>
+  {% endif %}
+</div>
+<div class="auth-safe vsafe"><i class="bi bi-shield-lock me-1"></i>Your records stay on this computer.</div>
+<script>
+(function () {
+  const card = document.getElementById("vcard");
+  const panes = { owner: card.querySelector(".vpane-owner"), staff: card.querySelector(".vpane-staff") };
+  function show(role, focus) {
+    if (!panes[role]) return;
+    card.dataset.role = role;
+    Object.entries(panes).forEach(([k, p]) => { if (p) p.inert = k !== role; });
+    if (focus) setTimeout(() => {
+      const f = panes[role].querySelector("select, input:not([type=hidden])");
+      if (f) f.focus();
+    }, 700);
+  }
+  card.querySelectorAll("[data-to]").forEach((b) => b.addEventListener("click", () => show(b.dataset.to, true)));
+  card.querySelectorAll("[data-eye]").forEach((b) => b.addEventListener("click", () => {
+    const i = b.parentElement.querySelector("input");
+    i.type = i.type === "password" ? "text" : "password";
+    b.querySelector("i").className = "bi " + (i.type === "text" ? "bi-eye-slash" : "bi-eye");
+  }));
+  card.querySelectorAll("input").forEach((i) => i.addEventListener("keyup", (e) => {
+    const warn = i.closest(".vpane").querySelector(".vcaps");
+    if (warn && e.getModifierState) warn.hidden = !e.getModifierState("CapsLock");
+  }));
+  requestAnimationFrame(() => card.classList.add("in"));
+  show(card.dataset.role, false);
+  const first = panes[card.dataset.role] && panes[card.dataset.role].querySelector("select, input:not([type=hidden])");
+  if (first) first.focus();
+})();
+</script>
+{% endblock %}

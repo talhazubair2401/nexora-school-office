@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Teachers' register {{ month|date:"F Y" }}{% endblock %}
+{% block back_fallback %}{% url 'office:teacher_attendance' %}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:attendance_home' %}">Attendance</a><a href="{% url 'office:teacher_attendance' %}">Teachers</a><span>Register</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Teachers · {{ month|date:"F Y" }}</h1>
+  <a class="btn btn-light" href="?month={{ prev|date:'Y-m' }}" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+  <form method="get" data-autosubmit><input class="form-control" type="month" name="month" value="{{ month|date:'Y-m' }}" aria-label="Month"></form>
+  <a class="btn btn-light" href="?month={{ next|date:'Y-m' }}" aria-label="Next month"><i class="bi bi-chevron-right"></i></a>
+  <a class="btn btn-indigo" href="?month={{ month|date:'Y-m' }}&amp;print=1"><i class="bi bi-printer me-1"></i>Print register</a>
+</div>
+<section class="panel">{% include "office/_register_grid.html" %}</section>
+{% endblock %}

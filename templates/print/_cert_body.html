@@ -1,0 +1,49 @@
+{% load office_tags %}<h1 class="cert-title"><span>{{ title|upper }}</span></h1>
+
+{% if kind == "SLC" %}
+  <p class="cert-text">Certified that {{ d.name|fill:"60mm" }} {{ p.so }} {{ d.father_name|fill:"55mm" }} was a bona fide student of this school. The particulars below are correct according to the school admission and withdrawal register.</p>
+  <table class="cert-table">
+    <tr><td>1.</td><td>Date of birth</td><td>{{ d.dob|fill_date }}{% if dob_words %} <span class="words">({{ dob_words }})</span>{% endif %}</td></tr>
+    <tr><td>2.</td><td>B-Form no.</td><td>{{ d.b_form_no|fill }}</td></tr>
+    <tr><td>3.</td><td>Date of admission</td><td>{{ d.admission_date|fill_date }}{% if d.class_admitted %} &nbsp; in class {{ d.class_admitted|fill }}{% endif %}</td></tr>
+    <tr><td>4.</td><td>Class at the time of leaving</td><td>{{ d.class_leaving|fill }}</td></tr>
+    <tr><td>5.</td><td>Date of leaving</td><td>{{ d.leaving_date|fill_date }}</td></tr>
+    <tr><td>6.</td><td>Reason for leaving</td><td>{{ d.reason|fill:"70mm" }}</td></tr>
+    <tr><td>7.</td><td>Conduct and character</td><td>{{ d.conduct|fill }}</td></tr>
+    <tr><td>8.</td><td>Fit for promotion to</td><td>{{ d.promotion|fill }}</td></tr>
+    <tr><td>9.</td><td>Fee / dues</td><td>{{ d.fee_status|fill:"70mm" }}</td></tr>
+  </table>
+  <p class="cert-text">We wish {{ p.him }} every success in life.</p>
+
+{% elif kind == "CHAR" %}
+  <p class="cert-text">This is to certify that {{ d.name|fill:"60mm" }}, {{ p.son }} of {{ d.father_name|fill:"55mm" }}, Admission No. {{ d.admission_no|fill:"30mm" }}, has been a bona fide student of this school from {{ d.from_date|fill_date }} to {% if d.to_date %}{{ d.to_date|fill_date }}{% else %}<b class="val">till date</b>{% endif %}{% if d.class_now %} and {% if d.to_date %}was{% else %}is{% endif %} studying in {{ d.class_now|fill }}{% endif %}.</p>
+  <p class="cert-text">During this period {{ p.his }} conduct and character remained {{ d.conduct|fill }}. To the best of our knowledge {{ p.he }} did not take part in any activity against the rules and discipline of the school, and bears a good moral character.</p>
+  <p class="cert-text">We wish {{ p.him }} every success in life.</p>
+
+{% elif kind == "DOB" %}
+  <p class="cert-text">This is to certify that {{ d.name|fill:"60mm" }}, {{ p.son }} of {{ d.father_name|fill:"55mm" }}, is a bona fide student of this school{% if d.class_now %}, studying in {{ d.class_now|fill }}{% endif %} (Admission No. {{ d.admission_no|fill:"30mm" }}{% if d.admission_date %}, admitted on {{ d.admission_date|fill_date }}{% endif %}).</p>
+  <p class="cert-text">According to the school admission register, {{ p.his }} date of birth is</p>
+  <div class="cert-big">{{ d.dob|fill_date:"45mm" }}{% if dob_words %}<div class="words">{{ dob_words }}</div>{% endif %}</div>
+  {% if d.b_form_no %}<p class="cert-text">B-Form no.: {{ d.b_form_no|fill }}</p>{% endif %}
+  <p class="cert-text">This certificate is issued on the request of {{ p.his }} parent / guardian.</p>
+
+{% elif kind == "PASS" %}
+  <p class="cert-text">This is to certify that {{ d.name|fill:"60mm" }}, {{ p.son }} of {{ d.father_name|fill:"55mm" }}, Admission No. {{ d.admission_no|fill:"30mm" }}, was a regular student of this school during the session {{ d.session|fill:"30mm" }}.</p>
+  <p class="cert-text">{{ p.He }} appeared in the {{ d.exam|fill:"70mm" }} held by the {{ d.board|fill:"70mm" }} in {{ d.exam_year|fill:"18mm" }} under Roll No. {{ d.board_roll|fill:"28mm" }} and passed, obtaining {{ d.marks|fill:"18mm" }} marks out of {{ d.total_marks|fill:"18mm" }}{% if d.grade %}, grade / division {{ d.grade|fill }}{% endif %}.</p>
+  <p class="cert-text">{{ p.His }} conduct and character remained {{ d.conduct|fill }} during {{ p.his }} stay at the school. We wish {{ p.him }} a bright future.</p>
+
+{% elif kind == "EXP" %}
+  <p class="cert-text">This is to certify that {{ p.mr }} {{ d.name|fill:"60mm" }}, {{ p.son }} of {{ d.father_name|fill:"55mm" }}{% if d.cnic %}, CNIC No. {{ d.cnic|fill }}{% endif %}, {% if d.end_date %}worked{% else %}has been working{% endif %} in this school as {{ d.designation|fill }}{% if d.subjects %} ({{ d.subjects }}){% endif %} from {{ d.join_date|fill_date }} {% if d.end_date %}to {{ d.end_date|fill_date }}{% else %}<b class="val">till date</b>{% endif %}.</p>
+  <p class="cert-text">During this period we found {{ p.him }} hardworking, punctual and devoted to {{ p.his }} duties. {{ p.His }} conduct and behaviour with students, parents and colleagues remained {{ d.conduct|fill }}.</p>
+  <p class="cert-text">We wish {{ p.him }} every success in {{ p.his }} future career.</p>
+
+{% elif kind == "REL" %}
+  <p class="cert-text">This is to certify that {{ p.mr }} {{ d.name|fill:"60mm" }}, {{ p.son }} of {{ d.father_name|fill:"55mm" }}{% if d.cnic %}, CNIC No. {{ d.cnic|fill }}{% endif %}, served in this school as {{ d.designation|fill }} from {{ d.join_date|fill_date }} to {{ d.end_date|fill_date }}.</p>
+  <p class="cert-text">{{ p.He }} has been relieved of {{ p.his }} duties with effect from {{ d.end_date|fill_date }}, {{ d.relieve_reason|fill:"60mm" }}. {{ p.He }} has handed over all school record and property, and nothing is due against {{ p.him }}.</p>
+  <p class="cert-text">{{ p.His }} conduct during service remained {{ d.conduct|fill }}. We wish {{ p.him }} success in the future.</p>
+
+{% elif kind == "APP" %}
+  <p class="cert-text">The management of {{ school.name }} is pleased to appreciate {{ p.mr }} {{ d.name|fill:"60mm" }}{% if d.father_name %}, {{ p.son }} of {{ d.father_name }}{% endif %}, {{ d.designation|fill }}, for {{ d.appreciation|fill:"90mm" }}.</p>
+  <p class="cert-text">{{ p.His }} efforts are a credit to the school. We are thankful for {{ p.his }} services and hope {{ p.he }} will continue to work with the same spirit.</p>
+{% endif %}
+

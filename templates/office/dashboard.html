@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Home{% endblock %}
+{% block crumbs %}<span>Home</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">{{ month|date:"F Y" }}</h1>
+  {% if access.attendance %}<a class="btn btn-indigo" href="{% url 'office:attendance_home' %}"><i class="bi bi-calendar2-check me-1"></i>Attendance</a>{% endif %}
+  {% if access.students %}<a class="btn btn-primary" href="{% url 'office:student_create' %}"><i class="bi bi-person-plus me-1"></i>New admission</a>{% endif %}
+  {% if access.fees %}<a class="btn btn-light" href="{% url 'office:fee_month' %}"><i class="bi bi-cash-coin me-1"></i>Receive fee</a>{% endif %}
+  {% if access.tests %}<a class="btn btn-light" href="{% url 'office:test_create' %}"><i class="bi bi-journal-plus me-1"></i>New test</a>{% endif %}
+</div>
+{% if not access.owner %}<p class="text-muted mb-3">Assalam-o-Alaikum, <b>{{ access.name }}</b>. Have a good day at work.</p>{% endif %}
+
+{% if access.owner %}{% if backup_days is None or backup_days >= 7 %}
+<div class="alert alert-info d-flex flex-wrap align-items-center gap-2">
+  <span class="me-auto"><i class="bi bi-hdd me-1"></i>{% if backup_days is None %}<strong>No backup has been made yet.</strong> Keep a copy of the records on a USB stick in case this computer has a problem.{% else %}The last backup was <strong>{{ backup_days }} days ago</strong>.{% endif %}</span>
+  <a class="btn btn-sm btn-primary" href="{% url 'office:settings' %}#backup">Back up now</a>
+</div>
+{% endif %}{% endif %}
+{% if not fees_created and access.fees %}
+<div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
+  <span class="me-auto"><strong>{{ month|date:"F" }} fees haven't been created yet.</strong> Create them once at the start of each month; every studying student gets their own fee for the month.</span>
+  <form method="post" action="{% url 'office:fee_generate' %}">{% csrf_token %}<input type="hidden" name="month" value="{{ month|date:'Y-m' }}">
+    <button class="btn btn-sm btn-primary" type="submit">Create {{ month|date:"F" }} fees</button></form>
+</div>
+{% endif %}
+
+{% if access.attendance %}
+<a class="att-strip mb-3 text-decoration-none" href="{% url 'office:attendance_home' %}">
+  <i class="bi bi-calendar2-check"></i>
+  <span><b>Attendance today:</b> {% if att.marked %}{{ att.present }} of {{ att.total }} students present{% if att.absent %} · <span class="text-danger">{{ att.absent }} absent</span>{% endif %}{% else %}not marked yet{% endif %}</span>
+  <span>{{ att.classes_done }} of {{ att.classes }} classes marked</span>
+  {% if att.teachers_total %}<span><b>Teachers:</b> {% if att.teachers_marked %}{{ att.teachers_present }} of {{ att.teachers_total }} present{% else %}not marked yet{% endif %}</span>{% endif %}
+  <span class="ms-auto btn btn-sm btn-primary">Mark attendance</span>
+</a>
+{% endif %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3"><a class="figure text-decoration-none" href="{% url 'office:student_list' %}"><span class="value">{{ student_count }}</span><span class="label">Students studying</span><span class="hint">{{ teacher_count }} teachers</span></a></div>
+  {% if access.fees %}<div class="col-6 col-xl-3"><a class="figure good text-decoration-none" href="{% url 'office:fee_month' %}"><span class="value">{{ received|rs }}</span><span class="label">Fees received this month</span><span class="hint">{% if fees_created %}{{ collected_for_month|rs }} of {{ billed|rs }} for {{ month|date:"F" }}{% else %}&nbsp;{% endif %}</span></a></div>
+  <div class="col-6 col-xl-3"><a class="figure {% if all_balance %}bad{% endif %} text-decoration-none" href="{% url 'office:fee_month' %}?status=unpaid"><span class="value">{{ all_balance|rs }}</span><span class="label">Fees still to collect</span><span class="hint">{% if fees_created %}{{ unpaid_count }} students owe for {{ month|date:"F" }}{% else %}all months{% endif %}</span></a></div>{% endif %}
+  {% if access.owner %}<div class="col-6 col-xl-3"><a class="figure text-decoration-none" href="{% url 'office:profit' %}"><span class="value" {% if profit < 0 %}style="color:var(--red)"{% endif %}>{{ profit|rs }}</span><span class="label">Profit this month so far</span><span class="hint">{{ received|rs }} received{% if extra_received %} + {{ extra_received|rs }} paper fund / fines{% endif %} − {{ salaries_paid|rs }} salaries{% if show_expenses %} − {{ expenses|rs }} expenses{% endif %}</span></a></div>{% endif %}
+</div>
+
+<section class="mb-3">
+  <div class="d-flex align-items-center mb-2">
+    <h2 class="h5 mb-0 me-auto">Classes</h2>
+    <a class="small" href="{% url 'office:class_list' %}">{% if access.owner %}Manage classes{% else %}All classes{% endif %}</a>
+  </div>
+  <div class="row g-3">
+    {% for c in classes %}
+      <div class="col-6 col-md-4 col-xl-3 col-xxl-2">
+        <a class="board" href="{{ c.get_absolute_url }}">
+          <div class="band" style="background: {{ c.colour }}; color: {{ c.colour|text_on }}"><h3>{{ c.name }}</h3></div>
+          <div class="body d-flex align-items-end justify-content-between">
+            <div><div class="count">{{ c.n }}</div>student{{ c.n|pluralize }}</div>
+            <span class="small">{% if c.default_fee %}{{ c.default_fee|rs }}/mo{% endif %}</span>
+          </div>
+        </a>
+      </div>
+    {% empty %}
+      <div class="col-12"><div class="panel empty"><i class="bi bi-grid"></i>No classes yet.{% if access.owner %} <a href="{% url 'office:class_create' %}">Add the first class</a>.{% endif %}</div></div>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="row g-3">
+{% if access.fees %}<div class="{% if access.owner %}col-xl-8{% else %}col-12{% endif %}">
+<section class="panel h-100">
+  <div class="panel-head"><h2>Latest fee payments</h2><span class="small">Today: <b class="text-success">{{ today_received|rs }}</b> · <a href="{% url 'office:daily_collection' %}">Daily collection</a></span><a class="small" href="{% url 'office:fee_month' %}">All fees</a></div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>Receipt</th><th>Date</th><th>Student</th><th>Class</th><th>For</th><th class="money">Amount</th><th></th></tr></thead>
+      <tbody>
+      {% for p in recent_payments %}
+        <tr>
+          <td class="text-muted">{{ p.receipt_no }}</td><td>{{ p.paid_on|date:"d M" }}</td>
+          <td><a class="row-link" href="{{ p.fee.student.get_absolute_url }}">{{ p.fee.student.name }}</a></td>
+          <td>{{ p.fee.student.classroom|default:"–" }}</td><td>{{ p.fee.month|date:"F Y" }}</td>
+          <td class="money">{{ p.amount|rs }}</td>
+          <td class="text-end"><a class="btn btn-sm btn-light" href="{% url 'office:receipt' p.pk %}"><i class="bi bi-printer"></i> Receipt</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7"><div class="empty"><i class="bi bi-receipt"></i>No payments recorded yet.</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+</div>{% endif %}
+{% if access.owner %}<div class="col-xl-4">
+<section class="panel h-100">
+  <div class="panel-head"><h2>Recent activity</h2><a class="small" href="{% url 'office:activity' %}">See all</a></div>
+  <ul class="list-group list-group-flush">
+    {% for a in recent_activity %}<li class="list-group-item small"><span class="text-muted">{{ a.at|date:"d M, h:i A" }}{% if a.who %} · {{ a.who }}{% endif %}</span><br>{% if a.link %}<a class="text-reset" href="{{ a.link }}">{{ a.text }}</a>{% else %}{{ a.text }}{% endif %}</li>
+    {% empty %}<li class="list-group-item text-muted small">Things you do will be listed here.</li>{% endfor %}
+  </ul>
+</section>
+</div>{% endif %}
+</div>
+{% endblock %}

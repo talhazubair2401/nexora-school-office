@@ -1,0 +1,15 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Profit {{ session }}–{{ session|add:1 }}{% endblock %}
+{% block sheets %}
+<div class="sheet">
+  {% include "print/_head.html" %}
+  <div class="doc-title">PROFIT — APRIL {{ session }} TO MARCH {{ session|add:1 }}</div>
+  <table class="grid">
+    <thead><tr><th>Month</th><th class="n">Fees billed</th><th class="n">Fees received</th><th class="n">Salaries paid</th>{% if show_exp %}<th class="n">Other expenses</th>{% endif %}<th class="n">Profit</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td>{{ r.month|date:"F Y" }}</td><td class="n">{{ r.billed|rs }}</td><td class="n">{{ r.received|rs }}</td><td class="n">{{ r.salaries|rs }}</td>{% if show_exp %}<td class="n">{{ r.expenses|rs }}</td>{% endif %}<td class="n {% if r.profit < 0 %}low{% endif %}"><b>{{ r.profit|rs }}</b></td></tr>{% endfor %}</tbody>
+    <tfoot><tr><td>Total</td><td class="n">{{ totals.billed|rs }}</td><td class="n">{{ totals.received|rs }}</td><td class="n">{{ totals.salaries|rs }}</td>{% if show_exp %}<td class="n">{{ totals.expenses|rs }}</td>{% endif %}<td class="n">{{ totals.profit|rs }}</td></tr></tfoot>
+  </table>
+  <p class="small">Profit = fees received in the month − salaries paid in the month{% if show_exp %} − other expenses{% endif %}. Printed {% now "d-m-Y" %}.</p>
+</div>
+{% endblock %}

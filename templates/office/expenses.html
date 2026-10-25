@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Other expenses {{ month|date:"F Y" }}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:profit' %}">Profit</a><span>Other expenses</span><span>{{ month|date:"F Y" }}</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Other expenses</h1>
+  <div class="month-switch">
+    <a class="btn btn-sm btn-light" href="?month={{ prev|date:'Y-m' }}" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+    <span class="label">{{ month|date:"F Y" }}</span>
+    <a class="btn btn-sm btn-light" href="?month={{ next|date:'Y-m' }}" aria-label="Next month"><i class="bi bi-chevron-right"></i></a>
+  </div>
+</div>
+{% if not school.show_expenses %}<div class="alert alert-info d-flex flex-wrap align-items-center gap-2"><span class="me-auto">These expenses are <b>not</b> taken off the profit right now. Turn on “Include other expenses” on the Profit page whenever you want them counted.</span><a class="btn btn-sm btn-light" href="{% url 'office:profit' %}">Open Profit</a></div>{% endif %}
+<div class="row g-3">
+  <div class="col-xl-4">
+    <form method="post" class="panel mb-3">{% csrf_token %}
+      <div class="panel-head"><h2>Add an expense</h2></div>
+      <div class="panel-body row g-3">{% include "partials/fields.html" with fields=form cols="col-12" %}</div>
+      <div class="panel-body border-top"><button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg me-1"></i>Save expense</button></div>
+    </form>
+    {% if by_cat %}<section class="panel">
+      <div class="panel-head"><h2>By type — {{ month|date:"F" }}</h2></div>
+      <table class="table mb-0">{% for c in by_cat %}<tr><td class="ps-3">{{ c.category }}</td><td class="money pe-3">{{ c.s|rs }}</td></tr>{% endfor %}</table>
+    </section>{% endif %}
+  </div>
+  <div class="col-xl-8">
+    <section class="panel">
+      <div class="panel-head"><h2>{{ month|date:"F Y" }}</h2><span class="fw-bold">Total {{ total|rs }}</span></div>
+      <div class="table-responsive"><table class="table table-hover mb-0">
+        <thead><tr><th class="ps-3">Date</th><th>Type</th><th>Details</th><th class="money">Amount</th><th></th></tr></thead>
+        <tbody>
+        {% for e in rows %}
+          <tr><td class="ps-3">{{ e.date|date:"d M" }}</td><td>{{ e.category }}</td><td>{{ e.description|default:"–" }}</td><td class="money fw-semibold">{{ e.amount|rs }}</td>
+            <td class="text-end pe-3"><a class="btn btn-sm btn-light" href="{% url 'office:expense_edit' e.pk %}" aria-label="Edit"><i class="bi bi-pencil"></i></a></td></tr>
+        {% empty %}
+          <tr><td colspan="5"><div class="empty"><i class="bi bi-receipt-cutoff"></i>No expenses entered for {{ month|date:"F Y" }}.</div></td></tr>
+        {% endfor %}
+        </tbody>
+        {% if rows %}<tfoot><tr><td class="ps-3" colspan="3">Total</td><td class="money">{{ total|rs }}</td><td></td></tr></tfoot>{% endif %}
+      </table></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

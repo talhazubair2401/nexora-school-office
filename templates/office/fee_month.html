@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Fees {{ month|date:"F Y" }}{% endblock %}
+{% block crumbs %}<span>Fees</span><span>{{ month|date:"F Y" }}</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Fees</h1>
+  <a class="btn btn-sm btn-light" href="{% url 'office:daily_collection' %}"><i class="bi bi-calendar-check me-1"></i>Daily collection</a>
+  <div class="month-switch">
+    <a class="btn btn-sm btn-light" href="?month={{ prev|date:'Y-m' }}&amp;class={{ cls }}&amp;status={{ status }}" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+    <span class="label">{{ month|date:"F Y" }}</span>
+    <a class="btn btn-sm btn-light" href="?month={{ next|date:'Y-m' }}&amp;class={{ cls }}&amp;status={{ status }}" aria-label="Next month"><i class="bi bi-chevron-right"></i></a>
+  </div>
+</div>
+
+{% if missing %}
+{% if missing == missing_zero %}
+<div class="alert alert-info"><strong>{{ missing }} studying student{{ missing|pluralize }} {{ missing|pluralize:"has,have" }} no monthly fee set</strong>, so no {{ month|date:"F" }} fee was made for {{ missing|pluralize:"this student,them" }}. Set the fee on each student's page, then come back and press the button that appears here. <a href="{% url 'office:student_list' %}?nofee=1">Show these students</a></div>
+{% else %}
+<div class="alert {% if month_exists %}alert-info{% else %}alert-warning{% endif %} d-flex flex-wrap align-items-center gap-2">
+  <span class="me-auto">
+    {% if month_exists %}{{ missing }} studying student{{ missing|pluralize }} don't have a fee for {{ month|date:"F" }} yet (for example new admissions).
+    {% else %}<strong>{{ month|date:"F Y" }} fees haven't been created yet.</strong> This gives every studying student their fee for the month, using their own fee and discount.{% endif %}
+    {% if missing_zero %}<br><span class="small">{{ missing_zero }} of them have no monthly fee set and will be skipped.</span>{% endif %}
+  </span>
+  <form method="post" action="{% url 'office:fee_generate' %}">{% csrf_token %}<input type="hidden" name="month" value="{{ month|date:'Y-m' }}">
+    <button class="btn btn-primary" type="submit">{% if month_exists %}Add them{% else %}Create {{ month|date:"F" }} fees{% endif %}</button></form>
+</div>
+{% endif %}
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value">{{ totals.net|rs }}</span><span class="label">To collect for {{ month|date:"F" }}</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure good"><span class="value">{{ totals.paid|rs }}</span><span class="label">Received for {{ month|date:"F" }}</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure {% if totals.balance %}bad{% endif %}"><span class="value">{{ totals.balance|rs }}</span><span class="label">{{ month|date:"F" }} still due</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure {% if totals.arrears %}bad{% endif %}"><span class="value">{{ totals.arrears|rs }}</span><span class="label">Older months still due</span><span class="hint">for the students shown</span></div></div>
+</div>
+
+<form method="get" class="panel panel-body mb-3" data-autosubmit>
+  <input type="hidden" name="month" value="{{ month|date:'Y-m' }}">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4"><label class="form-label" for="q">Student</label><input class="form-control" id="q" name="q" value="{{ q }}" placeholder="Name or admission no."></div>
+    <div class="col-6 col-md-3"><label class="form-label" for="cls">Class</label>
+      <select class="form-select" id="cls" name="class"><option value="">All classes</option>{% for c in classes %}<option value="{{ c.pk }}" {% if c.pk|stringformat:"s" == cls %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label" for="status">Show</label>
+      <select class="form-select" id="status" name="status"><option value="">Everyone</option><option value="unpaid" {% if status == "unpaid" %}selected{% endif %}>Owes money</option><option value="paid" {% if status == "paid" %}selected{% endif %}>Paid</option></select></div>
+    <div class="col-md-3 d-flex gap-2">
+      <a class="btn btn-light flex-fill" href="{% url 'office:unpaid_list' %}?month={{ month|date:'Y-m' }}&amp;class={{ cls }}"><i class="bi bi-printer me-1"></i>Unpaid list</a>
+      <a class="btn btn-light flex-fill" href="{% url 'office:class_challans' %}?class={{ cls }}&amp;next={{ request.get_full_path|urlencode }}"><i class="bi bi-receipt me-1"></i>Challans</a>
+    </div>
+  </div>
+</form>
+
+<section class="panel">
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>Student</th><th>Class</th><th class="money">To pay</th><th class="money">Paid</th><th class="money">Balance</th><th class="money">Older dues</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for r in rows %}{% with f=r.fee %}
+        <tr>
+          <td><a class="row-link" href="{{ f.student.get_absolute_url }}#fees">{{ f.student.name }}</a><div class="small text-muted">{{ f.student.father_name }}{% if f.discount %}{% if f.student.father_name %} · {% endif %}{{ f.discount|rs }} discount{% endif %}</div></td>
+          <td>{% if f.student.classroom %}<span class="class-dot" style="background:{{ f.student.classroom.colour }}"></span>{{ f.student.classroom }}{% endif %}</td>
+          <td class="money">{{ f.net|rs }}</td>
+          <td class="money">{{ f.paid|rs }}</td>
+          <td class="money fw-semibold {% if f.balance %}text-danger{% endif %}">{{ f.balance|rs }}</td>
+          <td class="money {% if r.arrears %}text-danger{% else %}text-muted{% endif %}">{% if r.arrears %}{{ r.arrears|rs }}{% else %}–{% endif %}</td>
+          <td><span class="chip chip-{{ f.status }}">{{ f.status_label }}</span></td>
+          <td class="text-end text-nowrap">
+            {% if f.balance %}
+              <form method="post" action="{% url 'office:fee_mark_paid' f.pk %}" class="d-inline" data-confirm="Receive the full &lt;b&gt;{{ f.balance|rs }}&lt;/b&gt; from &lt;b&gt;{{ f.student.name|force_escape|force_escape }}&lt;/b&gt; ({{ f.student.classroom|default:''|force_escape|force_escape }}) for {{ f.month|date:'F Y' }} today?&lt;br&gt;&lt;span class='text-muted small'&gt;A receipt number is given and this month shows as paid.&lt;/span&gt;" data-confirm-yes="Yes, paid in full">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="btn btn-sm btn-primary" type="submit" title="Receive the full {{ f.balance|rs }} today">Paid in full</button></form>
+              <a class="btn btn-sm btn-light" href="{% url 'office:payment_add' f.pk %}?next={{ request.get_full_path|urlencode }}">Part payment</a>
+            {% else %}
+              {% with p=f.payments.all|first %}{% if p %}<a class="btn btn-sm btn-light" href="{% url 'office:receipt' p.pk %}"><i class="bi bi-printer me-1"></i>Receipt</a>{% endif %}{% endwith %}
+            {% endif %}
+            <a class="btn btn-sm btn-light" href="{% url 'office:challan' f.student.pk %}" title="Fee challan" aria-label="Fee challan"><i class="bi bi-receipt"></i></a>
+            {% if access.owner %}<a class="btn btn-sm btn-light" href="{% url 'office:charge_add' %}?student={{ f.student.pk }}&amp;kind=LATE&amp;month={{ f.month|date:'Y-m' }}" title="Add a fine or paper fund" aria-label="Add a fine"><i class="bi bi-plus-circle"></i></a>{% endif %}
+            {% if access.owner %}<a class="btn btn-sm btn-light" href="{% url 'office:fee_edit' f.pk %}?next={{ request.get_full_path|urlencode }}" title="Change fee or discount" aria-label="Edit fee"><i class="bi bi-pencil"></i></a>{% endif %}
+          </td>
+        </tr>
+      {% endwith %}{% empty %}
+        <tr><td colspan="8"><div class="empty"><i class="bi bi-cash-coin"></i>{% if month_exists %}No students match this filter.{% else %}No fees for {{ month|date:"F Y" }} yet. Use the button above to create them.{% endif %}</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

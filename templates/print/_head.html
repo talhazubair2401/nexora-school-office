@@ -1,0 +1,9 @@
+<div class="head">
+  <img src="{{ logo_url }}" alt="">
+  <div>
+    <div class="school">{{ school.name|upper }}</div>
+    {% if school.name_urdu %}<div class="urdu">{{ school.name_urdu }}</div>{% endif %}
+    <div class="meta">{{ school.address }}{% if school.phone %} · Ph: {{ school.phone }}{% endif %}{% if school.motto %}<br>{{ school.motto }}{% endif %}</div>
+  </div>
+  {% if right %}<div class="right">{{ right|linebreaksbr }}</div>{% endif %}
+</div>

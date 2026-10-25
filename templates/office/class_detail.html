@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}{{ classroom }}{% endblock %}
+{% block back_fallback %}{% url 'office:class_list' %}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:class_list' %}">Classes</a><span>{{ classroom.name }}</span>{% endblock %}
+{% block content %}
+<div class="panel mb-3 overflow-hidden">
+  <div class="d-flex flex-wrap align-items-center gap-2 p-3" style="background: {{ classroom.colour }}; color: {{ classroom.colour|text_on }}">
+    <div class="me-auto">
+      <h1 class="page-title" style="color:inherit">{{ classroom.name }}</h1>
+      <div style="opacity:.9">{{ rows|length }} students studying · usual fee {{ classroom.default_fee|rs }}{% if classroom.class_teacher %} · Class teacher: {{ classroom.class_teacher }}{% endif %}</div>
+    </div>
+    {% if access.attendance %}<a class="btn btn-light" href="{% url 'office:attendance_mark' classroom.pk %}"><i class="bi bi-calendar2-check me-1"></i>Attendance</a>{% endif %}
+    {% if access.students %}<a class="btn btn-light" href="{% url 'office:student_create' %}?class={{ classroom.pk }}"><i class="bi bi-person-plus me-1"></i>Admit student</a>{% endif %}
+    {% if access.tests %}<a class="btn btn-light" href="{% url 'office:test_create' %}?class={{ classroom.pk }}"><i class="bi bi-journal-plus me-1"></i>New test</a>{% endif %}
+    {% if access.owner %}<a class="btn btn-light" href="{% url 'office:class_update' classroom.pk %}"><i class="bi bi-pencil me-1"></i>Edit class</a>{% endif %}
+  </div>
+</div>
+
+{% if no_fee and access.owner %}
+<div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
+  <span class="me-auto"><strong>{{ no_fee }} student{{ no_fee|pluralize }} in this class {{ no_fee|pluralize:"has,have" }} no monthly fee set.</strong>
+  {% if classroom.default_fee %}You can give them the usual fee of {{ classroom.default_fee|rs }} in one click, then change any one on their own page.{% else %}First set the class's usual fee with “Edit class”.{% endif %}</span>
+  {% if classroom.default_fee %}<form method="post" action="{% url 'office:class_apply_fee' classroom.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Give them {{ classroom.default_fee|rs }}</button></form>
+  {% else %}<a class="btn btn-primary" href="{% url 'office:class_update' classroom.pk %}">Edit class</a>{% endif %}
+</div>
+{% endif %}
+<div class="row g-3">
+  <div class="col-xl-8">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Students</h2>
+        <div class="d-flex gap-2">
+          {% if access.fees %}<a class="btn btn-sm btn-light" href="{% url 'office:fee_month' %}?class={{ classroom.pk }}&amp;month={{ month|date:'Y-m' }}">Fees for {{ month|date:"F" }}</a>{% endif %}
+          <a class="btn btn-sm btn-light" href="{% url 'office:class_print_list' classroom.pk %}"><i class="bi bi-printer me-1"></i>Print class list</a>
+          {% if access.fees %}<a class="btn btn-sm btn-light" href="{% url 'office:class_challans' %}?class={{ classroom.pk }}"><i class="bi bi-receipt me-1"></i>Challans for all who owe</a>{% endif %}
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Roll</th><th>Student</th><th>Father</th><th>Adm. no.</th><th class="money">Monthly fee</th><th>{{ month|date:"F" }}</th></tr></thead>
+          <tbody>
+          {% for r in rows %}
+            <tr>
+              <td class="text-muted">{{ r.s.roll_no|default:"–" }}</td>
+              <td><a class="row-link" href="{{ r.s.get_absolute_url }}">{{ r.s.name }}</a></td>
+              <td>{{ r.s.father_name|default:"–" }}</td>
+              <td class="text-muted small">{{ r.s.admission_no }}</td>
+              <td class="money">{% if r.s.monthly_fee %}{{ r.s.net_fee|rs }}{% if r.s.discount %} <span class="text-muted small">({{ r.s.discount|rs }} off)</span>{% endif %}{% else %}<span class="chip chip-PART">not set</span>{% endif %}</td>
+              <td>{% if r.fee %}<span class="chip chip-{{ r.fee.status }}">{{ r.fee.status_label }}</span>{% else %}<span class="text-muted small">–</span>{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6"><div class="empty"><i class="bi bi-people"></i>No students in this class yet.</div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if others %}<div class="panel-body border-top small text-muted">{{ others }} other student{{ others|pluralize }} (left or not attending) — <a href="{% url 'office:student_list' %}?class={{ classroom.pk }}&amp;status=">show all</a>.</div>{% endif %}
+    </section>
+  </div>
+  <div class="col-xl-4">
+    <section class="panel mb-3" id="subjects">
+      <div class="panel-head"><h2>Subjects</h2><span class="small text-muted">Used when you make a test</span></div>
+      <ul class="list-group list-group-flush">
+        {% for sub in subjects %}
+          {% if not access.owner %}<li class="list-group-item">{{ sub.name }}</li>{% else %}
+          <li class="list-group-item d-flex align-items-center gap-1">
+            <form method="post" action="{% url 'office:subject_update' sub.pk %}" class="d-flex flex-fill gap-1">{% csrf_token %}
+              <input class="form-control form-control-sm" name="name" value="{{ sub.name }}" aria-label="Subject name">
+              <button class="btn btn-sm btn-light" type="submit" title="Save name" aria-label="Save name"><i class="bi bi-check-lg"></i></button>
+            </form>
+            <form method="post" action="{% url 'office:subject_move' sub.pk 'up' %}">{% csrf_token %}<button class="btn btn-sm btn-light" {% if forloop.first %}disabled{% endif %} aria-label="Move up"><i class="bi bi-arrow-up"></i></button></form>
+            <form method="post" action="{% url 'office:subject_move' sub.pk 'down' %}">{% csrf_token %}<button class="btn btn-sm btn-light" {% if forloop.last %}disabled{% endif %} aria-label="Move down"><i class="bi bi-arrow-down"></i></button></form>
+            <form method="post" action="{% url 'office:subject_delete' sub.pk %}" onsubmit="return confirm('Remove {{ sub.name|escapejs }} from {{ classroom.name|escapejs }}?')">{% csrf_token %}<button class="btn btn-sm btn-light text-danger" aria-label="Remove {{ sub.name }}"><i class="bi bi-x-lg"></i></button></form>
+          </li>{% endif %}
+        {% empty %}
+          <li class="list-group-item text-muted">No subjects yet. Write them below.</li>
+        {% endfor %}
+      </ul>
+      {% if access.owner %}<form method="post" action="{% url 'office:subject_add' classroom.pk %}" class="panel-body border-top">{% csrf_token %}
+        <label class="form-label" for="new-subject">Add subjects</label>
+        <div class="input-group">
+          <input class="form-control" id="new-subject" name="name" placeholder="e.g. English, Urdu, Maths" required>
+          <button class="btn btn-primary" type="submit">Add</button>
+        </div>
+        <div class="form-text">Write several at once, separated by commas.</div>
+      </form>{% endif %}
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Tests</h2><a class="small" href="{% url 'office:test_list' %}?class={{ classroom.pk }}">All</a></div>
+      <ul class="list-group list-group-flush">
+        {% for t in tests %}
+          <li class="list-group-item d-flex justify-content-between">{% if access.tests %}<a href="{{ t.get_absolute_url }}">{{ t.name }}</a>{% else %}{{ t.name }}{% endif %}<span class="text-muted small">{{ t.date|date:"d M Y" }}</span></li>
+        {% empty %}
+          <li class="list-group-item text-muted">No tests yet.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+</div>
+{% endblock %}

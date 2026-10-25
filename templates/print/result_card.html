@@ -1,0 +1,38 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Result card — {{ test.name }}{% endblock %}
+{% block head %}<style>@page { size: A5 portrait; margin: 8mm; }</style>{% endblock %}
+{% block sheets %}
+{% for r in rows %}
+<div class="sheet a5">
+  {% include "print/_head.html" %}
+  <div class="doc-title">RESULT CARD — {{ test.name|upper }}</div>
+  <table class="info">
+    <tr><td class="k">Student</td><td class="v" colspan="3">{{ r.student.name }}</td></tr>
+    <tr><td class="k">Father's name</td><td class="v" colspan="3">{{ r.student.father_name }}</td></tr>
+    <tr><td class="k">Class</td><td class="v">{{ test.classroom }}</td><td class="k">Roll no.</td><td class="v">{{ r.student.roll_no|default:"" }}</td></tr>
+    <tr><td class="k">Adm. no.</td><td class="v">{{ r.student.admission_no }}</td><td class="k">Date</td><td class="v">{{ test.date|date:"d-m-Y" }}</td></tr>
+  </table>
+  <table class="grid" style="margin-top:10px">
+    <thead><tr><th>Subject</th><th class="n">Full marks</th><th class="n">Obtained</th><th class="n">%</th></tr></thead>
+    <tbody>
+    {% for s in subjects %}{% with m=r.marks|get_item:s.pk %}
+      <tr><td>{{ s.name }}</td><td class="n">{{ s.full_marks|num }}</td>
+        <td class="n">{% if m %}{% if m.absent %}Absent{% else %}{{ m.obtained|num }}{% endif %}{% else %}–{% endif %}</td>
+        <td class="n">{% if m and not m.absent and m.obtained is not None %}{% widthratio m.obtained s.full_marks 100 %}%{% endif %}</td></tr>
+    {% endwith %}{% endfor %}
+    </tbody>
+    <tfoot><tr><td>Total</td><td class="n">{{ r.total|num }}</td><td class="n">{{ r.obtained|num }}</td><td class="n">{{ r.percent|pct }}</td></tr></tfoot>
+  </table>
+  <div class="result-summary">
+    <div><b>{{ r.percent|pct }}</b><span>Percentage</span></div>
+    <div><b>{{ r.grade }}</b><span>Grade</span></div>
+    <div><b>{{ r.position|ordinal }}</b><span>Position of {{ class_size }}</span></div>
+    <div><b style="color:{% if r.passed %}var(--green){% else %}var(--red){% endif %}">{% if r.passed %}Pass{% else %}Fail{% endif %}</b><span>Result</span></div>
+  </div>
+  <div class="small"><b>Remarks</b></div>
+  <div class="remark-box">{{ r.remark }}</div>
+  <div class="sign" style="--cols:3"><div>Class teacher</div><div>Principal</div><div>Parent</div></div>
+</div>
+{% endfor %}
+{% endblock %}

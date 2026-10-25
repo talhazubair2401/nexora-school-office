@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}{{ c.name }} attendance{% endblock %}
+{% block back_fallback %}{% url 'office:attendance_home' %}?date={{ day|date:'Y-m-d' }}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:attendance_home' %}?date={{ day|date:'Y-m-d' }}">Attendance</a><span>{{ c.name }}</span>{% endblock %}
+{% block content %}
+<div class="panel mb-3 overflow-hidden">
+  <div class="d-flex flex-wrap align-items-center gap-2 p-3" style="background: {{ c.colour }}; color: {{ c.colour|text_on }}">
+    <div class="me-auto">
+      <h1 class="page-title" style="color:inherit">{{ c.name }} attendance</h1>
+      <div style="opacity:.9">{{ day|date:"l j F Y" }} · {{ rows|length }} students{% if already %} · already marked, you can change it{% endif %}</div>
+    </div>
+    <form method="get" class="d-flex gap-2" data-autosubmit><input class="form-control" type="date" name="date" value="{{ day|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" aria-label="Date"></form>
+    <a class="btn btn-light" href="{% url 'office:attendance_register' c.pk %}?month={{ day|date:'Y-m' }}"><i class="bi bi-table me-1"></i>Monthly register</a>
+  </div>
+</div>
+{% if is_sunday %}<div class="alert alert-info py-2"><i class="bi bi-info-circle me-1"></i>This day is a Sunday.</div>{% endif %}
+
+{% if rows %}
+<form method="post" id="att-form" data-warn>{% csrf_token %}<input type="hidden" name="date" value="{{ day|date:'Y-m-d' }}">
+  <p class="text-muted">Everyone starts as <b>Present</b>. Just press <b>Absent</b> or <b>Leave</b> for those who are not here, then press <b>Save</b>.</p>
+  <div class="att-counts mb-3">
+    <span class="att-count p"><b data-count="P">{{ counts.P|default:0 }}</b> Present</span>
+    <span class="att-count a"><b data-count="A">{{ counts.A|default:0 }}</b> Absent</span>
+    <span class="att-count l"><b data-count="L">{{ counts.L|default:0 }}</b> Leave</span>
+    <button class="btn btn-outline-primary ms-auto" type="button" data-all-present><i class="bi bi-check2-all me-1"></i>Mark everyone present</button>
+  </div>
+  <section class="panel">
+    {% for r in rows %}
+    <div class="att-row" data-att-row>
+      <span class="att-roll">{{ r.s.roll_no|default:"–" }}</span>
+      <div class="att-name"><b>{{ r.s.name }}</b><small>{% if r.s.father_name %}{{ r.s.so_do }} {{ r.s.father_name }}{% endif %}</small></div>
+      <div class="att-choices" role="radiogroup" aria-label="Attendance for {{ r.s.name }}">
+        {% for v, label in choices %}
+          <input class="btn-check" type="radio" name="s{{ r.s.pk }}" id="s{{ r.s.pk }}{{ v }}" value="{{ v }}" {% if r.status == v %}checked{% endif %} autocomplete="off">
+          <label class="btn att-btn att-{{ v }}" for="s{{ r.s.pk }}{{ v }}">{{ label }}</label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  <div class="att-savebar">
+    <span><b>{{ c.name }}</b> · <span data-count="P">{{ counts.P|default:0 }}</span> present, <span data-count="A">{{ counts.A|default:0 }}</span> absent, <span data-count="L">{{ counts.L|default:0 }}</span> on leave</span>
+    <button class="btn btn-primary btn-lg ms-auto" type="submit"><i class="bi bi-check-lg me-1"></i>Save attendance</button>
+  </div>
+</form>
+{% else %}
+<div class="panel empty"><i class="bi bi-people"></i>No students are studying in {{ c.name }}.</div>
+{% endif %}
+<div class="d-flex flex-wrap gap-1 mt-3">{% for k in all_classes %}<a class="btn btn-sm {% if k.pk == c.pk %}btn-indigo{% else %}btn-light{% endif %}" href="{% url 'office:attendance_mark' k.pk %}?date={{ day|date:'Y-m-d' }}">{{ k.name }}</a>{% endfor %}</div>
+{% endblock %}

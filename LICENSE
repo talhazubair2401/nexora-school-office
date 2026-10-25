@@ -1,0 +1,16 @@
+Copyright (c) 2026 Talha Zubair (Nexora Software & Web Solutions). All rights reserved.
+
+This repository is published so that clients and employers can review the code
+and try the public demo. No license is granted to copy, modify, distribute,
+sublicense, sell or deploy this software, in whole or in part, without prior
+written permission from the copyright holder.
+
+Third-party components keep their own licenses and belong to their authors:
+  - Django (BSD-3-Clause), Pillow (MIT-CMU)
+  - Bootstrap 5 and Bootstrap Icons (MIT), Chart.js (MIT)
+  - Poppins font (SIL Open Font License 1.1) — static/fonts/Poppins-LICENSE.txt
+  - Jameel Noori Nastaleeq font — property of its authors, included only to render Urdu text
+
+"Nexora Model School" is a fictional school used for the demo.
+
+For licensing or a demo for your school: nexoraservices90@gmail.com

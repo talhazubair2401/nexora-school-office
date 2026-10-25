@@ -1,0 +1,30 @@
+{% load office_tags %}<div id="student-results" data-total="{{ total }}">
+{% if f.q %}<div class="search-summary small text-muted mb-2">{% if total %}{{ total }} found for “{{ f.q }}”{% if numeric %} — numbers search only the admission no. and phone{% endif %}.{% else %}Nothing found for “{{ f.q }}”.{% endif %}</div>{% endif %}
+{% for key, title, items in groups %}
+<section class="panel mb-3">
+  {% if title %}<div class="panel-head"><h2>{{ title }} <span class="text-muted fw-normal small">{{ items|length }}</span></h2></div>{% endif %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr>{% for col, label, cls in columns %}<th class="{{ cls }}"><a class="sort-link" href="?{% if sort_qs %}{{ sort_qs }}&amp;{% endif %}sort={% if f.sort == col %}-{% endif %}{{ col }}">{{ label }}{% if f.sort == col %} <i class="bi bi-caret-up-fill"></i>{% elif f.sort == "-"|add:col %} <i class="bi bi-caret-down-fill"></i>{% endif %}</a></th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for s in items %}
+        <tr>
+          <td class="text-muted small">{{ s.admission_no }}</td>
+          <td><div class="d-flex align-items-center gap-2">{% include "partials/avatar.html" with s=s size="" %}<a class="row-link" href="{{ s.get_absolute_url }}">{{ s.name }}</a></div></td>
+          <td>{{ s.father_name|default:"–" }}</td>
+          <td>{% if s.classroom %}<span class="class-dot" style="background:{{ s.classroom.colour }}"></span>{{ s.classroom }}{% else %}–{% endif %}</td>
+          <td>{{ s.roll_no|default:"–" }}</td>
+          <td class="money">{% if s.monthly_fee %}{{ s.net_fee|rs }}{% else %}<span class="chip chip-PART">not set</span>{% endif %}</td>
+          <td>{{ s.phone|default:"–" }}</td>
+          <td><span class="chip chip-{{ s.status }}">{{ s.get_status_display }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page %}{% include "partials/pagination.html" %}{% endif %}
+</section>
+{% empty %}
+<section class="panel"><div class="empty"><i class="bi bi-search"></i>No students match. Check the spelling, try “Search in: Everything”, or choose Show: “Everyone”.</div></section>
+{% endfor %}
+</div>

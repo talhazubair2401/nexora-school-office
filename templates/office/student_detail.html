@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}{{ s.name }}{% endblock %}
+{% block back_fallback %}{% if s.classroom %}{{ s.classroom.get_absolute_url }}{% else %}{% url 'office:student_list' %}{% endif %}{% endblock %}
+{% block crumbs %}{% if s.classroom %}<a href="{% url 'office:class_list' %}">Classes</a><a href="{{ s.classroom.get_absolute_url }}">{{ s.classroom }}</a>{% else %}<a href="{% url 'office:student_list' %}">Students</a>{% endif %}<span>{{ s.name }}</span>{% endblock %}
+{% block content %}
+{% if count %}
+<div class="student-nav justify-content-end mb-2 no-print">
+  {% if prev_s %}<a class="btn btn-sm btn-light" id="prev-student" href="{% url 'office:student_detail' prev_s.0 %}" title="Previous student (← key)"><i class="bi bi-chevron-left"></i> {{ prev_s.1 }}</a>{% else %}<button class="btn btn-sm btn-light" disabled><i class="bi bi-chevron-left"></i> First</button>{% endif %}
+  <span class="pos">{{ pos }} of {{ count }} in {{ s.classroom }}</span>
+  {% if next_s %}<a class="btn btn-sm btn-light" id="next-student" href="{% url 'office:student_detail' next_s.0 %}" title="Next student (→ key)">{{ next_s.1 }} <i class="bi bi-chevron-right"></i></a>{% else %}<button class="btn btn-sm btn-light" disabled>Last <i class="bi bi-chevron-right"></i></button>{% endif %}
+</div>
+{% endif %}
+<section class="panel panel-body mb-3" {% if s.classroom %}style="border-top: 5px solid {{ s.classroom.colour }}"{% endif %}>
+  <div class="file-head">
+    {% include "partials/avatar.html" with s=s size="avatar-lg" %}
+    <div>
+      <h1 class="page-title">{{ s.name }}</h1>
+      <div class="text-muted mb-2">{% if s.father_name %}{% if s.gender == "F" %}D/o{% else %}S/o{% endif %} {{ s.father_name }} · {% endif %}{{ s.classroom|default:"No class" }}{% if s.roll_no %} · Roll {{ s.roll_no }}{% endif %}</div>
+      <span class="chip chip-{{ s.status }}">{{ s.get_status_display }}{% if s.left_on %} on {{ s.left_on|date:"d M Y" }}{% endif %}</span>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        {% if access.students %}<a class="btn btn-sm btn-primary" href="{% url 'office:student_update' s.pk %}"><i class="bi bi-pencil me-1"></i>Edit</a>
+        <a class="btn btn-sm btn-light" href="{% url 'office:student_print' s.pk %}"><i class="bi bi-printer me-1"></i>Print record</a>{% endif %}
+        {% if access.fees %}<a class="btn btn-sm btn-light" href="{% url 'office:challan' s.pk %}"><i class="bi bi-receipt me-1"></i>Fee challan</a>{% endif %}
+        {% if access.certificates %}<div class="dropdown">
+          <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-award me-1"></i>Certificate</button>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'office:certificate_new' 'SLC' %}?student={{ s.pk }}">School Leaving Certificate</a></li>
+            <li><a class="dropdown-item" href="{% url 'office:certificate_new' 'CHAR' %}?student={{ s.pk }}">Character Certificate</a></li>
+            <li><a class="dropdown-item" href="{% url 'office:certificate_new' 'DOB' %}?student={{ s.pk }}">Date of Birth Certificate</a></li>
+            <li><a class="dropdown-item" href="{% url 'office:certificate_new' 'PASS' %}?student={{ s.pk }}">Passing-out Certificate (Matric)</a></li>
+          </ul>
+        </div>{% endif %}
+        {% if not access.students %}{% elif s.status == "LEFT" %}
+          <form method="post" action="{% url 'office:student_restore' s.pk %}">{% csrf_token %}<button class="btn btn-sm btn-light" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Bring back to studying</button></form>
+        {% else %}
+          <button class="btn btn-sm btn-light text-danger" data-bs-toggle="collapse" data-bs-target="#leave-box" type="button"><i class="bi bi-box-arrow-right me-1"></i>Mark as left school</button>
+        {% endif %}
+      </div>
+    </div>
+    <div class="adm-no"><small>Admission no.</small><strong>{{ s.admission_no }}</strong>{% if s.admission_date %}<small>Admitted {{ s.admission_date|date:"d M Y" }}</small>{% endif %}</div>
+  </div>
+  <form method="post" action="{% url 'office:student_leave' s.pk %}" class="collapse mt-3" id="leave-box">{% csrf_token %}
+    <div class="p-3 rounded" style="background:var(--red-soft)">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label" for="id_left_on">Left on</label>{{ leave_form.left_on }}</div>
+        <div class="col-md-6"><label class="form-label" for="id_reason">Reason (optional)</label>{{ leave_form.reason }}</div>
+        <div class="col-md-3"><button class="btn btn-danger w-100" type="submit">Mark as left</button></div>
+      </div>
+      <div class="small mt-2">The record, fees and results are kept. The student just stops appearing in class lists and new fee months.</div>
+    </div>
+  </form>
+</section>
+
+{% if s.remarks %}<div class="alert alert-warning py-2"><i class="bi bi-sticky me-1"></i>{{ s.remarks|linebreaksbr }}</div>{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value">{% if s.monthly_fee %}{{ s.net_fee|rs }}{% else %}–{% endif %}</span><span class="label">Monthly fee</span><span class="hint">{% if s.discount %}{{ s.monthly_fee|rs }} − {{ s.discount|rs }} discount{% elif not s.monthly_fee %}Not set yet{% else %}No discount{% endif %}</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure {% if balance %}bad{% else %}good{% endif %}"><span class="value">{{ balance|rs }}</span><span class="label">Fee due now</span><span class="hint">all unpaid months</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value">{{ paid_total|rs }}</span><span class="label">Total paid</span><span class="hint">{{ fees|length }} month{{ fees|length|pluralize }} on record</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value">{% if results %}{{ results.0.percent|pct }}{% else %}–{% endif %}</span><span class="label">Latest result</span><span class="hint">{% if results %}{{ results.0.test.name }} · {{ results.0.grade }} · {{ results.0.position|ordinal }}{% else %}No tests yet{% endif %}</span></div></div>
+</div>
+
+{% if att_month.marked or att_session.marked %}
+<div class="att-strip mb-3"><i class="bi bi-calendar2-check"></i>
+  <span><b>Attendance this month:</b> {% if att_month.marked %}{{ att_month.present }} of {{ att_month.marked }} days ({{ att_month.percent }}%){% if att_month.absent %} · {{ att_month.absent }} absent{% endif %}{% if att_month.leave %} · {{ att_month.leave }} leave{% endif %}{% else %}not marked yet{% endif %}</span>
+  <span><b>This school year:</b> {{ att_session.present }} of {{ att_session.marked }} days ({{ att_session.percent }}%)</span>
+  {% if access.attendance and s.classroom %}<a class="ms-auto small" href="{% url 'office:attendance_register' s.classroom.pk %}">Monthly register</a>{% endif %}
+</div>
+{% endif %}
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-fees" type="button" role="tab" id="fees">Fees</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-results" type="button" role="tab">Results</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-profile" type="button" role="tab">Details</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-history" type="button" role="tab">Class history{% if certificates %} &amp; certificates{% endif %}</button></li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tab-fees" role="tabpanel">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Fee record</h2>
+        {% if access.owner %}<form method="post" action="{% url 'office:fee_add_for_student' s.pk %}" class="d-flex gap-2 align-items-center">{% csrf_token %}
+          <label class="small text-muted" for="add-month">Add a month</label>
+          <input class="form-control form-control-sm" type="month" id="add-month" name="month" value="{% now 'Y-m' %}" style="width:150px">
+          <button class="btn btn-sm btn-light" type="submit">Add</button>
+        </form>{% endif %}
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Month</th><th class="money">Fee</th><th class="money">Discount</th><th class="money">To pay</th><th class="money">Paid</th><th class="money">Balance</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+          {% for f in fees %}
+            <tr>
+              <td class="fw-semibold">{{ f.month|date:"F Y" }}{% if f.note %}<div class="small text-muted">{{ f.note }}</div>{% endif %}</td>
+              <td class="money">{{ f.amount|rs }}{% if f.extra %}<div class="small text-muted">+ {{ f.extra|rs }} added</div>{% endif %}</td><td class="money">{% if f.discount %}{{ f.discount|rs }}{% else %}–{% endif %}</td>
+              <td class="money">{{ f.net|rs }}</td><td class="money">{{ f.paid|rs }}</td>
+              <td class="money fw-semibold {% if f.balance %}text-danger{% endif %}">{{ f.balance|rs }}</td>
+              <td><span class="chip chip-{{ f.status }}">{{ f.status_label }}</span></td>
+              <td class="text-end text-nowrap">
+                {% if f.balance and access.fees %}<a class="btn btn-sm btn-primary" href="{% url 'office:payment_add' f.pk %}?next={{ request.path|urlencode }}">Receive</a>{% endif %}
+                {% if access.owner %}<a class="btn btn-sm btn-light" href="{% url 'office:fee_edit' f.pk %}?next={{ request.path|urlencode }}" title="Change fee or discount for this month" aria-label="Edit"><i class="bi bi-pencil"></i></a>{% endif %}
+              </td>
+            </tr>
+            {% for c in f.charges.all %}
+              <tr class="small text-muted"><td colspan="3" class="ps-4"><i class="bi bi-plus-lg me-1"></i>{{ c.get_kind_display }}{% if c.reason %} — {{ c.reason }}{% endif %} <span class="text-muted">({{ c.date|date:"d M" }})</span></td>
+                <td class="money">{{ c.amount|rs }}</td><td colspan="3"></td>
+                <td class="text-end">{% if access.owner %}<a class="btn btn-sm btn-light text-danger" href="{% url 'office:charge_delete' c.pk %}?next={{ request.path|urlencode }}" aria-label="Remove"><i class="bi bi-x-lg"></i></a>{% endif %}</td></tr>
+            {% endfor %}
+            {% for p in f.payments.all %}
+              <tr class="small text-muted"><td colspan="4" class="ps-4"><i class="bi bi-arrow-return-right me-1"></i>Received {{ p.paid_on|date:"d M Y" }} · receipt {{ p.receipt_no }}{% if p.received_by_name %} · by {{ p.received_by_name }}{% endif %}{% if p.note %} · {{ p.note }}{% endif %}</td>
+                <td class="money">{{ p.amount|rs }}</td><td colspan="2"></td>
+                <td class="text-end text-nowrap">{% if access.fees %}<a class="btn btn-sm btn-light" href="{% url 'office:receipt' p.pk %}" aria-label="Print receipt"><i class="bi bi-printer"></i></a>{% endif %}
+                  {% if access.owner %}<a class="btn btn-sm btn-light text-danger" href="{% url 'office:payment_delete' p.pk %}?next={{ request.path|urlencode }}" aria-label="Delete payment"><i class="bi bi-x-lg"></i></a>{% endif %}</td></tr>
+            {% endfor %}
+          {% empty %}
+            <tr><td colspan="8"><div class="empty"><i class="bi bi-cash"></i>No fee months yet. They appear when you create a month's fees on the Fees page, or add one above.</div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel mt-3">
+      <div class="panel-head"><h2>Paper fund &amp; fines kept separate</h2>
+        <span class="d-flex gap-2">{% if separate_unpaid %}<a class="btn btn-sm btn-light" href="{% url 'office:charge_slips' %}?student={{ s.pk }}"><i class="bi bi-printer me-1"></i>Slip</a>{% endif %}
+        {% if access.owner %}<a class="btn btn-sm btn-primary" href="{% url 'office:charge_add' %}?student={{ s.pk }}"><i class="bi bi-plus-lg me-1"></i>Add paper fund or fine</a>{% endif %}</span></div>
+      <div class="table-responsive"><table class="table table-hover mb-0">
+        <tbody>
+        {% for c in separate_charges %}
+          <tr><td class="ps-3 text-nowrap">{{ c.date|date:"d M Y" }}</td><td>{{ c.get_kind_display }}{% if c.reason %} <span class="text-muted small">— {{ c.reason }}</span>{% endif %}</td>
+            <td class="money fw-semibold">{{ c.amount|rs }}</td>
+            <td>{% if c.paid_on %}<span class="chip chip-PAID">Paid {{ c.paid_on|date:"d M" }}</span> <span class="small text-muted">{{ c.receipt_no }}</span>{% else %}<span class="chip chip-UNPAID">Not paid</span>{% endif %}</td>
+            <td class="text-end text-nowrap">
+              {% if not c.paid_on and access.fees %}<form method="post" action="{% url 'office:charge_receive' c.pk %}" class="d-inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><input type="hidden" name="print" value="1"><button class="btn btn-sm btn-primary" type="submit">Received</button></form>{% endif %}
+              {% if c.paid_on and access.fees %}<a class="btn btn-sm btn-light" href="{% url 'office:charge_receipt' c.pk %}" aria-label="Print receipt"><i class="bi bi-printer"></i></a>{% endif %}
+              {% if access.owner %}<a class="btn btn-sm btn-light text-danger" href="{% url 'office:charge_delete' c.pk %}?next={{ request.path|urlencode }}" aria-label="Remove"><i class="bi bi-x-lg"></i></a>{% endif %}
+            </td></tr>
+        {% empty %}
+          <tr><td><div class="text-muted small p-2">None. Paper fund or fines added to a month's fee show in the fee record above.</div></td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <div class="tab-pane fade" id="tab-results" role="tabpanel">
+    <section class="panel">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Test</th><th>Date</th><th class="money">Marks</th><th class="money">%</th><th>Grade</th><th>Position</th><th>Remarks</th><th></th></tr></thead>
+          <tbody>
+          {% for r in results %}
+            <tr>
+              <td>{% if access.tests %}<a class="row-link" href="{{ r.test.get_absolute_url }}">{{ r.test.name }}</a>{% else %}<b>{{ r.test.name }}</b>{% endif %}<div class="small text-muted">{{ r.test.classroom }}</div></td>
+              <td>{{ r.test.date|date:"d M Y" }}</td>
+              <td class="money">{{ r.obtained|num }} / {{ r.total|num }}</td>
+              <td class="money fw-semibold">{{ r.percent|pct }}</td>
+              <td><span class="chip {% if r.passed %}chip-pass{% else %}chip-fail{% endif %}">{{ r.grade }}</span></td>
+              <td>{{ r.position|ordinal }} <span class="text-muted small">of {{ r.out_of }}</span></td>
+              <td class="small">{{ r.remark }}</td>
+              <td class="text-end">{% if access.tests %}<a class="btn btn-sm btn-light" href="{% url 'office:result_cards' r.test.pk %}?student={{ s.pk }}"><i class="bi bi-printer me-1"></i>Result card</a>{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8"><div class="empty"><i class="bi bi-journal"></i>No test marks yet.</div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-pane fade" id="tab-profile" role="tabpanel">
+    <div class="row g-3">
+      <div class="col-lg-6"><section class="panel panel-body h-100"><dl class="detail-list">
+        <dt>Father's name</dt><dd>{{ s.father_name|default:"–" }}</dd>
+        <dt>Mother's name</dt><dd>{{ s.mother_name|default:"–" }}</dd>
+        <dt>Gender</dt><dd>{{ s.get_gender_display|default:"–" }}</dd>
+        <dt>Date of birth</dt><dd>{% if s.date_of_birth %}{{ s.date_of_birth|date:"d M Y" }} ({{ s.age }} years){% else %}–{% endif %}</dd>
+        <dt>B-Form no.</dt><dd>{{ s.b_form_no|default:"–" }}</dd>
+        <dt>Father's CNIC</dt><dd>{{ s.father_cnic|default:"–" }}</dd>
+        <dt>Phone</dt><dd>{{ s.phone|default:"–" }}</dd>
+        <dt>Address</dt><dd>{{ s.address|default:"–" }}</dd>
+      </dl></section></div>
+      <div class="col-lg-6"><section class="panel panel-body h-100"><dl class="detail-list">
+        <dt>Class</dt><dd>{{ s.classroom|default:"–" }}</dd>
+        <dt>Roll no.</dt><dd>{{ s.roll_no|default:"–" }}</dd>
+        <dt>Admission date</dt><dd>{{ s.admission_date|date:"d M Y"|default:"–" }}</dd>
+        <dt>Previous school</dt><dd>{{ s.previous_school|default:"–" }}</dd>
+        <dt>Blood group</dt><dd>{{ s.blood_group|default:"–" }}</dd>
+        <dt>Medical notes</dt><dd>{{ s.medical_notes|default:"–" }}</dd>
+      </dl>
+      {% if access.owner %}<div class="mt-3 text-end"><a class="small text-danger" href="{% url 'office:student_delete' s.pk %}">Delete this record permanently</a></div>{% endif %}
+      </section></div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tab-history" role="tabpanel">
+    <div class="row g-3">
+      <div class="col-lg-7"><section class="panel">
+        <div class="panel-head"><h2>Class history</h2><span class="small text-muted">From the yearly promotion</span></div>
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>School year</th><th>From</th><th>To</th><th>Result</th><th class="money">Fee</th></tr></thead>
+          <tbody>
+          {% if s.admission_date %}<tr class="text-muted"><td>{{ s.admission_date|date:"d M Y" }}</td><td colspan="4">Admitted</td></tr>{% endif %}
+          {% for h in history %}
+            <tr><td>{{ h.batch.session_year }}–{{ h.batch.session_year|add:1 }}</td><td>{{ h.from_class_name }}</td><td>{{ h.to_class_name|default:"–" }}</td>
+              <td><span class="chip {% if h.result == 'KEPT' %}chip-PART{% elif h.result == 'PASSED' %}chip-PASSED{% else %}chip-PAID{% endif %}">{{ h.get_result_display }}</span></td>
+              <td class="money">{% if h.old_fee != h.new_fee %}{{ h.old_fee|rs }} → {{ h.new_fee|rs }}{% else %}{{ h.new_fee|rs }}{% endif %}</td></tr>
+          {% empty %}
+            <tr><td colspan="5" class="text-muted">No promotions recorded yet. They appear here after Classes → Promote to next class.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      </section></div>
+      <div class="col-lg-5"><section class="panel">
+        <div class="panel-head"><h2>Certificates issued</h2></div>
+        <ul class="list-group list-group-flush">
+          {% for c in certificates %}
+            <li class="list-group-item d-flex justify-content-between align-items-center"><span>{{ c.get_kind_display }}<small class="d-block text-muted">{{ c.serial_no }} · {{ c.issued_on|date:"d M Y" }}</small></span><a class="btn btn-sm btn-light" href="{% url 'office:certificate_print' c.pk %}"><i class="bi bi-printer"></i></a></li>
+          {% empty %}
+            <li class="list-group-item text-muted">None yet. Use the “Certificate” button at the top.</li>
+          {% endfor %}
+        </ul>
+      </section></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

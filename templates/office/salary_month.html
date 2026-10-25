@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Salaries {{ month|date:"F Y" }}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:teacher_list' %}">Teachers</a><span>Salaries</span><span>{{ month|date:"F Y" }}</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Salaries</h1>
+  <div class="month-switch">
+    <a class="btn btn-sm btn-light" href="?month={{ prev|date:'Y-m' }}" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+    <span class="label">{{ month|date:"F Y" }}</span>
+    <a class="btn btn-sm btn-light" href="?month={{ next|date:'Y-m' }}" aria-label="Next month"><i class="bi bi-chevron-right"></i></a>
+  </div>
+</div>
+{% if missing %}
+<div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
+  <span class="me-auto">{% if rows %}{{ missing|length }} teacher{{ missing|length|pluralize }} not on the {{ month|date:"F" }} sheet yet.{% else %}<strong>The {{ month|date:"F Y" }} salary sheet hasn't been made yet.</strong> Each working teacher gets their fixed salary for the month.{% endif %}</span>
+  <form method="post" action="{% url 'office:salary_generate' %}">{% csrf_token %}<input type="hidden" name="month" value="{{ month|date:'Y-m' }}"><button class="btn btn-primary" type="submit">{% if rows %}Add them{% else %}Make {{ month|date:"F" }} salary sheet{% endif %}</button></form>
+</div>
+{% endif %}
+<div class="row g-3 mb-3">
+  <div class="col-md-4"><div class="figure"><span class="value">{{ total|rs }}</span><span class="label">Salaries for {{ month|date:"F" }}</span></div></div>
+  <div class="col-md-4"><div class="figure good"><span class="value">{{ paid|rs }}</span><span class="label">Paid</span></div></div>
+  <div class="col-md-4"><div class="figure {% if due %}bad{% endif %}"><span class="value">{{ due|rs }}</span><span class="label">Still to pay</span></div></div>
+</div>
+<section class="panel">
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>Teacher</th><th class="money">Salary</th><th class="money">Paid</th><th>Paid on</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for s in rows %}
+        <tr>
+          <td><a class="row-link" href="{{ s.teacher.get_absolute_url }}">{{ s.teacher.name }}</a>{% if s.note %}<div class="small text-muted">{{ s.note }}</div>{% endif %}</td>
+          <td class="money">{{ s.amount|rs }}</td><td class="money">{{ s.paid_amount|rs }}</td>
+          <td>{{ s.paid_on|date:"d M Y"|default:"–" }}</td>
+          <td><span class="chip chip-{{ s.status }}">{{ s.status_label }}</span></td>
+          <td class="text-end text-nowrap">
+            {% if s.status != "PAID" %}
+              <form method="post" action="{% url 'office:salary_mark_paid' s.pk %}" class="d-inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="btn btn-sm btn-primary" type="submit" name="print" value="1">Pay &amp; print slip</button></form>
+            {% endif %}
+            <a class="btn btn-sm btn-light" href="{% url 'office:salary_slip' s.pk %}"><i class="bi bi-printer me-1"></i>Slip</a>
+            <a class="btn btn-sm btn-light" href="{% url 'office:salary_edit' s.pk %}?next={{ request.get_full_path|urlencode }}" title="Change amount, part payment or date" aria-label="Edit"><i class="bi bi-pencil"></i></a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6"><div class="empty"><i class="bi bi-wallet2"></i>{% if missing %}No salary sheet for this month yet.{% else %}No working teachers. <a href="{% url 'office:teacher_create' %}">Add a teacher</a> first.{% endif %}</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

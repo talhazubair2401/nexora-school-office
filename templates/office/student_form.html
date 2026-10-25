@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:student_list' %}">Students</a>{% if s %}<a href="{{ s.get_absolute_url }}">{{ s.name }}</a><span>Edit</span>{% else %}<span>New admission</span>{% endif %}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">{{ title }}</h1>
+  {% if s %}<div class="adm-no"><small>Admission no.</small><strong>{{ s.admission_no }}</strong></div>{% else %}<span class="text-muted">The admission number is given automatically when you save, e.g. NMS-{% now "Y" %}-0001.</span>{% endif %}
+</div>
+{% if form.errors %}<div class="alert alert-danger">Please fix the details marked in red.</div>{% endif %}
+<form method="post" enctype="multipart/form-data" data-warn>{% csrf_token %}
+  <div class="row g-3">
+    <div class="col-xl-7">
+      <section class="panel panel-body h-100">
+        <h2 class="form-section">Student</h2>
+        <div class="row g-3">
+          {% include "partials/fields.html" with fields=form only="name,father_name,mother_name,gender,date_of_birth,b_form_no,father_cnic,phone,address,photo,previous_school,blood_group,medical_notes" %}
+        </div>
+      </section>
+    </div>
+    <div class="col-xl-5">
+      <section class="panel panel-body mb-3">
+        <h2 class="form-section">Class and fee</h2>
+        <div class="row g-3">
+          {% include "partials/fields.html" with fields=form only="classroom,roll_no,admission_date,monthly_fee,discount" %}
+          <div class="col-12"><div class="p-2 rounded" style="background:var(--green-soft)">Fee to pay every month: <strong id="net-fee">–</strong></div></div>
+        </div>
+      </section>
+      <section class="panel panel-body">
+        <h2 class="form-section">Notes</h2>
+        <div class="row g-3">{% include "partials/fields.html" with fields=form only="remarks" %}</div>
+      </section>
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mt-3">
+    <button class="btn btn-primary btn-lg" type="submit">{% if s %}Save changes{% else %}Admit student{% endif %}</button>
+    {% if not s %}<button class="btn btn-outline-primary btn-lg" type="submit" name="add_another" value="1">Admit and add another</button>{% endif %}
+    <a class="btn btn-light btn-lg" href="{% if s %}{{ s.get_absolute_url }}{% else %}{% url 'office:student_list' %}{% endif %}">Cancel</a>
+    {% if s and access.owner %}<a class="btn btn-outline-danger btn-lg ms-auto" href="{% url 'office:student_delete' s.pk %}"><i class="bi bi-trash me-1"></i>Delete this student</a>{% endif %}
+  </div>
+</form>
+{{ class_fees|json_script:"class-fees" }}
+{{ class_rolls|json_script:"class-rolls" }}
+{% endblock %}

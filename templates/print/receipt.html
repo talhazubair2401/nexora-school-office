@@ -1,0 +1,35 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Receipt {{ p.receipt_no }}{% endblock %}
+{% block head %}<style>@page { size: A5 portrait; margin: 8mm; }</style>{% endblock %}
+{% block sheets %}
+<div class="sheet a5">
+  {% include "print/_head.html" %}
+  <div class="doc-title">FEE RECEIPT</div>
+  <table class="info">
+    <tr><td class="k">Receipt no.</td><td class="v">{{ p.receipt_no }}</td><td class="k">Date</td><td class="v">{{ p.paid_on|date:"d-m-Y" }}</td></tr>
+    <tr><td class="k">Student</td><td class="v" colspan="3">{{ s.name }}</td></tr>
+    <tr><td class="k">Father's name</td><td class="v" colspan="3">{{ s.father_name|default:"" }}</td></tr>
+    <tr><td class="k">Class</td><td class="v">{{ s.classroom|default:"" }}</td><td class="k">Adm. no.</td><td class="v">{{ s.admission_no }}</td></tr>
+  </table>
+  <table class="grid" style="margin-top:10px">
+    <thead><tr><th>Description</th><th class="n">Amount</th></tr></thead>
+    <tbody>
+      <tr><td>Tuition fee — {{ fee.month|date:"F Y" }}</td><td class="n">{{ fee.amount|rs }}</td></tr>
+      {% if fee.discount %}<tr><td>Discount</td><td class="n">− {{ fee.discount|rs }}</td></tr>{% endif %}
+      {% for c in fee.charges.all %}<tr><td>{{ c.get_kind_display }}{% if c.reason %} — {{ c.reason }}{% endif %}</td><td class="n">{{ c.amount|rs }}</td></tr>{% endfor %}
+      <tr><td>Fee for the month</td><td class="n">{{ fee.net|rs }}</td></tr>
+      {% if fee.paid != p.amount %}<tr><td>Paid earlier / later for this month</td><td class="n">{{ fee.paid|rs }} in total</td></tr>{% endif %}
+    </tbody>
+  </table>
+  <div class="total-box"><span>Received</span><span>{{ p.amount|rs }}</span></div>
+  <div class="words small">{% money_words p.amount %}</div>
+  <table class="info" style="margin-top:8px">
+    <tr><td class="k">Balance for {{ fee.month|date:"F" }}</td><td class="v">{{ fee.balance|rs }}</td></tr>
+    <tr><td class="k">Total still due (all months)</td><td class="v">{{ still_due|rs }}</td></tr>
+  </table>
+  {% if p.note %}<div class="small" style="margin-top:6px">Note: {{ p.note }}</div>{% endif %}
+  <div class="stamp-row"><div class="stamp {% if fee.balance %}unpaid{% else %}paid{% endif %}">{% if fee.balance %}PART PAID{% else %}PAID{% endif %}<small>{{ p.paid_on|date:"d-m-Y" }}</small></div></div>
+  <div class="sign"><div>Received by</div><div>Accounts office</div></div>
+</div>
+{% endblock %}

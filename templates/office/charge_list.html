@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Paper fund & fines{% endblock %}
+{% block crumbs %}<span>Paper fund &amp; fines</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Paper fund &amp; fines</h1>
+  {% if unpaid_count %}<a class="btn btn-light" href="{% url 'office:charge_slips' %}?{{ qs }}"><i class="bi bi-printer me-1"></i>Print slips for unpaid ({{ unpaid_count }})</a>{% endif %}
+  {% if access.owner %}<a class="btn btn-primary" href="{% url 'office:charge_add' %}{% if cls %}?class={{ cls }}{% endif %}"><i class="bi bi-plus-lg me-1"></i>Add paper fund or fine</a>{% endif %}
+</div>
+<p class="text-muted">Each one is either <b>added to a month's fee</b> (it then shows on that month's challan and receipt and is paid with the fee) or <b>kept separate</b> with its own slip and receipt.</p>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3"><div class="figure"><span class="value">{{ total|rs }}</span><span class="label">Total shown below</span></div></div>
+  <div class="col-6 col-xl-3"><div class="figure"><span class="value">{{ withfee_total|rs }}</span><span class="label">Added to fees</span><span class="hint">collected with the fee</span></div></div>
+  <div class="col-6 col-xl-3"><div class="figure good"><span class="value">{{ received_total|rs }}</span><span class="label">Separate · received</span></div></div>
+  <div class="col-6 col-xl-3"><div class="figure {% if unpaid_total %}bad{% endif %}"><span class="value">{{ unpaid_total|rs }}</span><span class="label">Separate · not paid yet</span><span class="hint">{{ unpaid_count }} slip{{ unpaid_count|pluralize }}</span></div></div>
+</div>
+
+{% if groups %}
+<section class="panel mb-3">
+  <div class="panel-head"><h2>Added for a whole class</h2><span class="small text-muted">Remove a whole class's paper fund or fine in one step</span></div>
+  <div class="table-responsive"><table class="table table-hover mb-0">
+    <thead><tr><th class="ps-3">Date</th><th>Class</th><th>Type</th><th class="money">Each</th><th class="money">Students</th><th class="money">Total</th><th>How it is paid</th><th></th></tr></thead>
+    <tbody>{% for g in groups %}
+      <tr><td class="ps-3 text-nowrap">{{ g.date|date:"d M Y" }}</td><td class="fw-semibold">{{ g.label|default:"–" }}</td>
+        <td>{{ g.kind }}{% if g.reason %}<div class="small text-muted">{{ g.reason }}</div>{% endif %}</td>
+        <td class="money">{{ g.amount|rs }}</td><td class="money">{{ g.count }}</td><td class="money fw-semibold">{{ g.total|rs }}</td>
+        <td>{% if g.month %}With {{ g.month|date:"F Y" }} fee{% else %}Separate slips{% endif %}<div class="small text-muted">{{ g.settled }} of {{ g.count }} paid</div></td>
+        <td class="text-end text-nowrap">
+          <a class="btn btn-sm btn-light" href="?q=&amp;kind=&amp;status=&amp;class=&amp;batch={{ g.batch }}">Show</a>
+          {% if access.owner %}<a class="btn btn-sm btn-outline-danger" href="{% url 'office:charge_batch_delete' g.batch %}"><i class="bi bi-trash me-1"></i>Remove all</a>{% endif %}
+        </td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}
+
+<form method="get" class="panel panel-body mb-3" data-autosubmit>
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label" for="q">Look for</label><input class="form-control" id="q" name="q" value="{{ q }}" placeholder="Student, reason or receipt no."></div>
+    <div class="col-6 col-md-2"><label class="form-label" for="kind">Type</label>
+      <select class="form-select" id="kind" name="kind"><option value="">All types</option>{% for v, l in kinds %}<option value="{{ v }}" {% if v == kind %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label" for="cls">Class</label>
+      <select class="form-select" id="cls" name="class"><option value="">All classes</option>{% for c in classes %}<option value="{{ c.pk }}" {% if c.pk|stringformat:"s" == cls %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3"><label class="form-label" for="status">Show</label>
+      <select class="form-select" id="status" name="status">
+        <option value="">Everything</option>
+        <option value="unpaid" {% if status == "unpaid" %}selected{% endif %}>Separate, not paid yet</option>
+        <option value="paid" {% if status == "paid" %}selected{% endif %}>Separate, paid</option>
+        <option value="withfee" {% if status == "withfee" %}selected{% endif %}>Added to a fee</option>
+      </select></div>
+    <div class="col-6 col-md-2"><button class="btn btn-primary w-100" type="submit">Show</button></div>
+  </div>
+</form>
+
+<section class="panel">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th class="ps-3">Date</th><th>Student</th><th>Class</th><th>Type</th><th class="money">Amount</th><th>How it is paid</th><th></th></tr></thead>
+      <tbody>
+      {% for c in page %}
+        <tr>
+          <td class="ps-3 text-nowrap">{{ c.date|date:"d M Y" }}</td>
+          <td><a class="row-link" href="{{ c.student.get_absolute_url }}">{{ c.student.name }}</a></td>
+          <td>{{ c.student.classroom|default:"–" }}</td>
+          <td>{{ c.get_kind_display }}{% if c.reason %}<div class="small text-muted">{{ c.reason }}</div>{% endif %}</td>
+          <td class="money fw-semibold">{{ c.amount|rs }}</td>
+          <td>{% if c.fee %}<span class="chip chip-INACTIVE">With {{ c.fee.month|date:"F Y" }} fee</span> <span class="chip chip-{{ c.fee.status }}">{{ c.fee.status_label }}</span>
+              {% elif c.paid_on %}<span class="chip chip-PAID">Paid {{ c.paid_on|date:"d M" }}</span> <span class="small text-muted">{{ c.receipt_no }}{% if c.received_by_name %} · by {{ c.received_by_name }}{% endif %}</span>
+              {% else %}<span class="chip chip-UNPAID">Separate · not paid</span>{% endif %}</td>
+          <td class="text-end text-nowrap">
+            {% if not c.fee and not c.paid_on %}
+              <form method="post" action="{% url 'office:charge_receive' c.pk %}" class="d-inline" data-confirm="Receive &lt;b&gt;{{ c.amount|rs }}&lt;/b&gt; {{ c.get_kind_display|lower }} from &lt;b&gt;{{ c.student.name|force_escape|force_escape }}&lt;/b&gt; today?" data-confirm-yes="Yes, received">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="print" value="1">
+                <button class="btn btn-sm btn-primary" type="submit">Received</button></form>
+              <a class="btn btn-sm btn-light" href="{% url 'office:charge_slips' %}?student={{ c.student.pk }}" aria-label="Print slip"><i class="bi bi-printer"></i> Slip</a>
+            {% elif c.paid_on %}
+              <a class="btn btn-sm btn-light" href="{% url 'office:charge_receipt' c.pk %}"><i class="bi bi-printer me-1"></i>Receipt</a>
+            {% endif %}
+            {% if access.owner %}<a class="btn btn-sm btn-light text-danger" href="{% url 'office:charge_delete' c.pk %}?next={{ request.get_full_path|urlencode }}" aria-label="Remove"><i class="bi bi-x-lg"></i></a>{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7"><div class="empty"><i class="bi bi-journal-text"></i>Nothing here yet.{% if access.owner %} Press “Add paper fund or fine” to add one for a student or a whole class.{% endif %}</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "partials/pagination.html" %}
+</section>
+{% endblock %}

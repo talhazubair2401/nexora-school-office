@@ -1,0 +1,35 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Daily collection {{ start|date:"d-m-Y" }} to {{ end|date:"d-m-Y" }}{% endblock %}
+{% block sheets %}
+<div class="sheet">
+  {% include "print/_head.html" %}
+  <div class="doc-title">DAILY FEE COLLECTION — {{ start|date:"d M Y"|upper }}{% if start != end %} TO {{ end|date:"d M Y"|upper }}{% endif %}{% if classroom %} — {{ classroom.name|upper }}{% endif %}</div>
+  <table class="grid">
+    <thead><tr><th>Date</th><th>Receipt</th><th>Student</th><th>Class</th><th>For month</th><th>By</th><th class="n">Amount</th></tr></thead>
+    <tbody>
+    {% for d in days %}
+      {% for p in d.items %}
+        <tr><td>{% if forloop.first %}<b>{{ d.day|date:"D d-m-Y" }}</b>{% endif %}</td><td>{{ p.receipt_no }}</td><td>{{ p.fee.student.name }}</td><td>{{ p.fee.student.classroom|default:"" }}</td><td>{{ p.fee.month|date:"M Y" }}</td><td>{{ p.received_by_name }}</td><td class="n">{{ p.amount|rs }}</td></tr>
+      {% empty %}
+        <tr><td><b>{{ d.day|date:"D d-m-Y" }}</b></td><td colspan="6" class="small">Nothing received</td></tr>
+      {% endfor %}
+      {% if d.count %}<tr style="background:#f6f7fb"><td colspan="6" class="n"><b>Total for {{ d.day|date:"d-m-Y" }}</b> ({{ d.count }} receipt{{ d.count|pluralize }})</td><td class="n"><b>{{ d.total|rs }}</b></td></tr>{% endif %}
+    {% empty %}
+      <tr><td colspan="7" class="c">No fee was received between these dates.</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="6">Grand total — {{ count }} receipt{{ count|pluralize }} on {{ n_days }} day{{ n_days|pluralize }}</td><td class="n">{{ grand|rs }}</td></tr></tfoot>
+  </table>
+  {% if charges %}
+  <div class="doc-title" style="margin-top:12px">PAPER FUND &amp; FINES PAID SEPARATELY</div>
+  <table class="grid">
+    <thead><tr><th>Date</th><th>Receipt</th><th>Student</th><th>Class</th><th>For</th><th>By</th><th class="n">Amount</th></tr></thead>
+    <tbody>{% for c in charges %}<tr><td>{{ c.paid_on|date:"d-m-Y" }}</td><td>{{ c.receipt_no }}</td><td>{{ c.student.name }}</td><td>{{ c.student.classroom|default:"" }}</td><td>{{ c.label }}</td><td>{{ c.received_by_name }}</td><td class="n">{{ c.amount|rs }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><td colspan="6">Total paper fund &amp; fines</td><td class="n">{{ charges_total|rs }}</td></tr></tfoot>
+  </table>
+  {% endif %}
+  <div class="sign"><div>Accounts office</div><div>Principal</div></div>
+  <p class="small">Printed {% now "d-m-Y H:i" %}.</p>
+</div>
+{% endblock %}

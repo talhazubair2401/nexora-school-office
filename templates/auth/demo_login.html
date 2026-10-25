@@ -1,0 +1,22 @@
+{% extends "auth/_layout.html" %}
+{% block title %}Try the demo{% endblock %}
+{% block side_class %}vside{% endblock %}
+{% block side %}
+{% for m in messages %}<div class="vmsg vmsg-{{ m.tags|default:'info' }}" role="status"><i class="bi bi-info-circle me-2"></i>{{ m }}</div>{% endfor %}
+<div class="demo-card">
+  <span class="vhello">Assalam-o-Alaikum</span>
+  <h2 class="demo-title">Try the live demo</h2>
+  <p class="demo-sub">Choose who you want to be. Each login sees only what the principal allows, and the system checks it on every page.</p>
+  {% for a in accounts %}
+  <form method="post" action="{% url 'demo_login' %}">{% csrf_token %}
+    <input type="hidden" name="username" value="{{ a.username }}">
+    <button class="demo-role" type="submit">
+      <span class="demo-ic"><i class="bi bi-{% if a.owner %}person-badge{% elif a.username == 'demo_clerk' %}cash-coin{% else %}journal-check{% endif %}"></i></span>
+      <span class="demo-t"><b>{{ a.label }}</b><small>{{ a.desc }}</small></span>
+      <i class="bi bi-arrow-right demo-go"></i>
+    </button>
+  </form>
+  {% endfor %}
+  <p class="demo-note"><i class="bi bi-info-circle me-1"></i>A fictional school with made-up students, teachers and fees. Changes are wiped at the next reset.</p>
+</div>
+{% endblock %}

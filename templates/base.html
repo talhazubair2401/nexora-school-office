@@ -1,0 +1,93 @@
+{% load static office_tags %}<!doctype html>
+<html lang="en" class="ui-{{ school.ui_size|default:'normal' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Office{% endblock %} · {{ school.name|default:"Nexora Model School" }}</title>
+  <link rel="icon" href="{% static 'img/school_logo_small.png' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+  <link rel="stylesheet" href="{% vstatic 'css/app.css' %}">
+</head>
+<body>
+{% block body %}
+<aside class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar" aria-label="Menu">
+  <div class="offcanvas-header d-lg-none text-white">
+    <span class="fw-semibold">Menu</span>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close"></button>
+  </div>
+  <div class="d-flex flex-column w-100">
+    <a class="brand" href="{% url 'office:dashboard' %}">
+      <img src="{{ logo_url }}" alt="">
+      <span><span class="brand-name d-block">{{ school.name }}</span><span class="brand-sub">School office</span></span>
+    </a>
+    <nav class="nav flex-column pb-3">
+      <a class="nav-link {% active '/' %}" href="{% url 'office:dashboard' %}"><i class="bi bi-house"></i>Home</a>
+      <div class="nav-group">Records</div>
+      <a class="nav-link {% active '/students/' %}" href="{% url 'office:student_list' %}"><i class="bi bi-people"></i>Students</a>
+      <a class="nav-link {% active '/classes/' '/subjects/' %}" href="{% url 'office:class_list' %}"><i class="bi bi-grid-3x3-gap"></i>Classes &amp; subjects</a>
+      {% if access.owner %}<a class="nav-link {% active '/teachers/' %}" href="{% url 'office:teacher_list' %}"><i class="bi bi-person-badge"></i>Teachers</a>{% endif %}
+      {% if access.attendance %}<a class="nav-link {% active '/attendance/' %}" href="{% url 'office:attendance_home' %}"><i class="bi bi-calendar2-check"></i>Attendance</a>{% endif %}
+      {% if access.fees or access.owner %}<div class="nav-group">Money</div>{% endif %}
+      {% if access.fees %}<a class="nav-link {% active '/fees/' '/payments/' %}" href="{% url 'office:fee_month' %}"><i class="bi bi-cash-coin"></i>Fees</a>
+      <a class="nav-link {% active '/collection/' %}" href="{% url 'office:daily_collection' %}"><i class="bi bi-calendar-check"></i>Daily collection</a>
+      <a class="nav-link {% active '/paper-fund-fines/' %}" href="{% url 'office:charge_list' %}"><i class="bi bi-journal-text"></i>Paper fund &amp; fines</a>{% endif %}
+      {% if access.owner %}<a class="nav-link {% active '/salaries/' %}" href="{% url 'office:salary_month' %}"><i class="bi bi-wallet2"></i>Salaries</a>
+      <a class="nav-link {% active '/expenses/' %}" href="{% url 'office:expense_list' %}"><i class="bi bi-receipt-cutoff"></i>Other expenses</a>
+      <a class="nav-link {% active '/profit/' %}" href="{% url 'office:profit' %}"><i class="bi bi-graph-up-arrow"></i>Profit</a>{% endif %}
+      {% if access.tests %}<div class="nav-group">Results</div>
+      <a class="nav-link {% active '/tests/' %}" href="{% url 'office:test_list' %}"><i class="bi bi-journal-check"></i>Tests &amp; results</a>{% endif %}
+      <div class="nav-group">Office</div>
+      {% if access.certificates %}<a class="nav-link {% active '/certificates/' %}" href="{% url 'office:certificate_list' %}"><i class="bi bi-award"></i>Certificates</a>{% endif %}
+      {% if access.owner %}<a class="nav-link {% active '/activity/' %}" href="{% url 'office:activity' %}"><i class="bi bi-clock-history"></i>Recent activity</a>
+      <a class="nav-link {% active '/logins/' %}" href="{% url 'office:users' %}"><i class="bi bi-shield-lock"></i>Logins</a>
+      <a class="nav-link {% active '/settings/' %}" href="{% url 'office:settings' %}"><i class="bi bi-gear"></i>Settings</a>
+      {% else %}<a class="nav-link {% active '/settings/password/' %}" href="{% url 'office:change_password' %}"><i class="bi bi-key"></i>Change my password</a>{% endif %}
+    </nav>
+    <div class="sidebar-foot mt-auto">
+      <div class="sidebar-user"><span class="who-dot" aria-hidden="true">{{ access.name|first|upper }}</span><span><b>{{ access.name }}</b><small>{% if access.owner %}Owner{% else %}Office staff{% endif %}</small></span></div>
+      <form method="post" action="{% url 'office:logout' %}">{% csrf_token %}
+        <button class="btn btn-sm w-100" style="background:var(--indigo-2);color:#fff" type="submit"><i class="bi bi-lock me-1"></i>Lock (log out)</button>
+      </form>
+      <a class="sidebar-maker text-decoration-none" href="{% url 'office:settings' %}#about">{% if maker.logo %}<img src="{{ maker.logo }}" alt="">{% endif %}Software by <b>{{ maker.short }}</b></a>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar no-print">
+    <div class="d-flex align-items-center gap-2 px-3 px-md-4 py-2">
+      <button class="btn btn-light d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-label="Open menu"><i class="bi bi-list"></i></button>
+      {% if request.path != "/" %}<a class="btn btn-light btn-back" href="{% block back_fallback %}{% url 'office:dashboard' %}{% endblock %}" data-back title="Go back to the previous page (Alt + ←)"><i class="bi bi-arrow-left me-1"></i>Back</a>{% endif %}
+      <span class="text-muted small d-none d-xl-inline">{% now "l, j F Y" %}</span>
+      <form class="ms-auto topsearch" method="get" action="{% url 'office:student_list' %}" role="search" autocomplete="off">
+        <i class="bi bi-search"></i>
+        <input class="form-control form-control-sm" type="search" name="q" id="top-q" placeholder="Find a student: name, father, adm. no., phone" aria-label="Find a student" data-suggest="{% url 'office:student_suggest' %}">
+        <input type="hidden" name="status" value="">
+        <div class="suggest-box" id="suggest-box" role="listbox" hidden></div>
+      </form>
+    </div>
+    <nav class="crumbs px-3 px-md-4" aria-label="You are here"><a href="{% url 'office:dashboard' %}" aria-label="Home"><i class="bi bi-house-door"></i></a>{% block crumbs %}{% endblock %}</nav>
+  </header>
+  <main class="content">
+    {% if DEMO_MODE %}<div class="demo-strip no-print"><i class="bi bi-stars"></i><span><b>Public demo — fictional school.</b> Every name and number is made up. Changes are shared with other visitors and wiped at the next reset{% if demo_reset %} ({{ demo_reset|date:"j M, g:i A" }} PKT){% endif %}. Log out (bottom of the menu) to try another login.</span></div>{% endif %}
+    {% for m in messages %}
+      <div class="alert alert-{{ m.tags|default:'info' }} alert-dismissible fade show no-print" role="alert">{{ m }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<div class="modal fade" id="confirm-modal" tabindex="-1" aria-labelledby="confirm-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title h5" id="confirm-title">Are you sure?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body" id="confirm-text"></div>
+    <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">No, go back</button><button type="button" class="btn btn-primary" id="confirm-yes">Yes</button></div>
+  </div></div>
+</div>
+{% endblock %}
+<script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+<script src="{% vstatic 'js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

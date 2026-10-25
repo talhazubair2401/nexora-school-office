@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Daily collection{% endblock %}
+{% block crumbs %}<a href="{% url 'office:fee_month' %}">Fees</a><span>Daily collection</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Daily fee collection</h1>
+  <a class="btn btn-light" href="?{{ qs }}{% if qs %}&amp;{% endif %}print=1"><i class="bi bi-printer me-1"></i>Print</a>
+</div>
+<form method="get" class="panel panel-body mb-3" data-autosubmit>
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-2"><label class="form-label" for="from">From</label><input class="form-control" type="date" id="from" name="from" value="{{ start|date:'Y-m-d' }}"></div>
+    <div class="col-6 col-md-2"><label class="form-label" for="to">To</label><input class="form-control" type="date" id="to" name="to" value="{{ end|date:'Y-m-d' }}"></div>
+    <div class="col-6 col-md-2"><label class="form-label" for="cls">Class</label>
+      <select class="form-select" id="cls" name="class"><option value="">All classes</option>{% for c in classes %}<option value="{{ c.pk }}" {% if c.pk|stringformat:"s" == cls %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-2"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="empty" name="empty" value="1" {% if show_empty %}checked{% endif %} onchange="this.form.requestSubmit()"><label class="form-check-label" for="empty">Show days with nothing</label></div></div>
+    <div class="col-md-4 d-flex flex-wrap gap-1">
+      {% for label, a, b in quick %}<a class="btn btn-sm {% if a == start and b == end %}btn-indigo{% else %}btn-light{% endif %}" href="?from={{ a|date:'Y-m-d' }}&amp;to={{ b|date:'Y-m-d' }}&amp;class={{ cls }}">{{ label }}</a>{% endfor %}
+      <button class="btn btn-sm btn-primary" type="submit">Show</button>
+    </div>
+  </div>
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="figure good"><span class="value">{{ grand|rs }}</span><span class="label">Received {{ start|date:"d M" }} – {{ end|date:"d M Y" }}</span>{% if classroom %}<span class="hint">{{ classroom }} only</span>{% endif %}</div></div>
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value">{{ count }}</span><span class="label">Receipts</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value">{{ average|rs }}</span><span class="label">Average per collection day</span><span class="hint">{{ n_days }} day{{ n_days|pluralize }} with money received</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value">{% if best and best.total %}{{ best.total|rs }}{% else %}–{% endif %}</span><span class="label">Best day</span><span class="hint">{% if best and best.total %}{{ best.day|date:"l, d M" }}{% else %}&nbsp;{% endif %}</span></div></div>
+</div>
+
+<section class="panel panel-body mb-3 cash-check" id="cash-check">
+  <div class="d-flex flex-wrap gap-4 align-items-start">
+    <div class="flex-fill">
+      <h2 class="h5 mb-2"><i class="bi bi-safe me-1"></i>Today's cash check · {{ today|date:"D d M" }}</h2>
+      {% for r in cash_today %}
+        <div class="d-flex justify-content-between border-bottom py-1"><span>Received by <b>{{ r.name }}</b> <span class="text-muted small">({{ r.count }} receipt{{ r.count|pluralize }})</span></span><b>{{ r.total|rs }}</b></div>
+      {% empty %}
+        <div class="text-muted">No fee received today yet.</div>
+      {% endfor %}
+      <div class="d-flex justify-content-between pt-2 fs-5"><span>Should be in the drawer</span><b data-cash-due="{{ cash_today_total|floatformat:0 }}">{{ cash_today_total|rs }}</b></div>
+    </div>
+    <div style="min-width:260px">
+      <label class="form-label fw-semibold" for="cash-counted">Cash you counted</label>
+      <div class="input-group input-group-lg"><span class="input-group-text">Rs.</span><input class="form-control" id="cash-counted" inputmode="numeric" placeholder="0" autocomplete="off"></div>
+      <div class="cash-result mt-2" id="cash-result" hidden></div>
+      <div class="form-text">Only for checking; nothing is saved.</div>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th class="ps-3">Date</th><th class="money">Receipts</th><th class="money">Received that day</th><th class="money">Running total</th><th></th></tr></thead>
+      <tbody>
+      {% for d in days %}
+        <tr {% if not d.count %}class="text-muted"{% endif %}>
+          <td class="ps-3 fw-semibold">{{ d.day|date:"D, d M Y" }}{% if d.day == today %} <span class="chip chip-PAID">today</span>{% endif %}</td>
+          <td class="money">{{ d.count|default:"–" }}</td>
+          <td class="money fw-bold">{% if d.total %}{{ d.total|rs }}{% else %}–{% endif %}</td>
+          <td class="money text-muted">{{ d.running|rs }}</td>
+          <td class="text-end">{% if d.count %}<button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#day-{{ forloop.counter }}" aria-expanded="false">Show receipts</button>{% endif %}</td>
+        </tr>
+        {% if d.count %}
+        <tr class="collapse" id="day-{{ forloop.counter }}"><td colspan="5" class="p-0">
+          <table class="table table-sm mb-0" style="background:#fafbfd">
+            <tbody>{% for p in d.items %}
+              <tr class="small"><td class="ps-4 text-muted">{{ p.receipt_no }}</td><td><a href="{{ p.fee.student.get_absolute_url }}">{{ p.fee.student.name }}</a> <span class="text-muted">{{ p.fee.student.classroom|default:"" }}</span></td>
+                <td>for {{ p.fee.month|date:"F Y" }}{% if p.note %} · {{ p.note }}{% endif %}{% if p.received_by_name %} · <span class="text-muted">by {{ p.received_by_name }}</span>{% endif %}</td><td class="money">{{ p.amount|rs }}</td>
+                <td class="text-end pe-3"><a class="btn btn-sm btn-light" href="{% url 'office:receipt' p.pk %}" aria-label="Print receipt"><i class="bi bi-printer"></i></a></td></tr>
+            {% endfor %}</tbody>
+          </table>
+        </td></tr>
+        {% endif %}
+      {% empty %}
+        <tr><td colspan="5"><div class="empty"><i class="bi bi-calendar-x"></i>No fee was received between these dates.</div></td></tr>
+      {% endfor %}
+      </tbody>
+      {% if days %}<tfoot><tr><td class="ps-3">Total</td><td class="money">{{ count }}</td><td class="money">{{ grand|rs }}</td><td></td><td></td></tr></tfoot>{% endif %}
+    </table>
+  </div>
+</section>
+<p class="small text-muted mt-2">Money is counted on the day it was received, whichever month it was for. Paper fund and fines added to a fee are part of the fee payments above.</p>
+{% if charges %}
+<section class="panel mt-3">
+  <div class="panel-head"><h2>Paper fund &amp; fines paid separately</h2><span class="small">Total: <b class="text-success">{{ charges_total|rs }}</b></span></div>
+  <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+    <thead><tr><th class="ps-3">Date</th><th>Receipt</th><th>Student</th><th>For</th><th class="money">Amount</th><th></th></tr></thead>
+    <tbody>{% for c in charges %}<tr><td class="ps-3">{{ c.paid_on|date:"D d M" }}</td><td class="text-muted">{{ c.receipt_no }}</td><td><a href="{{ c.student.get_absolute_url }}">{{ c.student.name }}</a> <span class="text-muted small">{{ c.student.classroom|default:"" }}</span></td>
+      <td>{{ c.label }}{% if c.received_by_name %} · <span class="text-muted">by {{ c.received_by_name }}</span>{% endif %}</td><td class="money">{{ c.amount|rs }}</td>
+      <td class="text-end pe-3"><a class="btn btn-sm btn-light" href="{% url 'office:charge_receipt' c.pk %}" aria-label="Print receipt"><i class="bi bi-printer"></i></a></td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}
+{% endblock %}

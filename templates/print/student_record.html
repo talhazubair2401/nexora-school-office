@@ -1,0 +1,33 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Student record — {{ s.name }}{% endblock %}
+{% block sheets %}
+<div class="sheet">
+  {% include "print/_head.html" %}
+  <div class="doc-title">STUDENT RECORD</div>
+  <div style="display:flex; gap:14px; align-items:flex-start">
+    <table class="info" style="flex:1">
+      <tr><td class="k">Admission no.</td><td class="v">{{ s.admission_no }}</td><td class="k">Status</td><td class="v">{{ s.get_status_display }}{% if s.left_on %} ({{ s.left_on|date:"d-m-Y" }}){% endif %}</td></tr>
+      <tr><td class="k">Student name</td><td class="v" colspan="3">{{ s.name }}</td></tr>
+      <tr><td class="k">Father's name</td><td class="v">{{ s.father_name }}</td><td class="k">Father's CNIC</td><td class="v">{{ s.father_cnic }}</td></tr>
+      <tr><td class="k">Mother's name</td><td class="v">{{ s.mother_name }}</td><td class="k">Gender</td><td class="v">{{ s.get_gender_display }}</td></tr>
+      <tr><td class="k">Date of birth</td><td class="v">{{ s.date_of_birth|date:"d-m-Y" }}</td><td class="k">B-Form no.</td><td class="v">{{ s.b_form_no }}</td></tr>
+      <tr><td class="k">Class</td><td class="v">{{ s.classroom|default:"" }}</td><td class="k">Roll no.</td><td class="v">{{ s.roll_no|default:"" }}</td></tr>
+      <tr><td class="k">Admission date</td><td class="v">{{ s.admission_date|date:"d-m-Y" }}</td><td class="k">Previous school</td><td class="v">{{ s.previous_school }}</td></tr>
+      <tr><td class="k">Phone</td><td class="v">{{ s.phone }}</td><td class="k">Blood group</td><td class="v">{{ s.blood_group }}</td></tr>
+      <tr><td class="k">Address</td><td class="v" colspan="3">{{ s.address }}</td></tr>
+      <tr><td class="k">Medical notes</td><td class="v" colspan="3">{{ s.medical_notes }}</td></tr>
+      <tr><td class="k">Monthly fee</td><td class="v">{{ s.monthly_fee|rs }}{% if s.discount %} − {{ s.discount|rs }} discount = {{ s.net_fee|rs }}{% endif %}</td><td class="k">Fee due now</td><td class="v">{{ balance|rs }}</td></tr>
+    </table>
+    <div class="photo-box">{% if s.photo %}<img src="{{ s.photo.url }}" alt="">{% else %}Photo{% endif %}</div>
+  </div>
+  {% if fees %}
+  <h3 style="color:var(--indigo); font-size:13px; margin:14px 0 6px">Fee record (last {{ fees|length }} months)</h3>
+  <table class="grid">
+    <thead><tr><th>Month</th><th class="n">To pay</th><th class="n">Paid</th><th class="n">Balance</th><th>Status</th></tr></thead>
+    <tbody>{% for f in fees %}<tr><td>{{ f.month|date:"F Y" }}</td><td class="n">{{ f.net|rs }}</td><td class="n">{{ f.paid|rs }}</td><td class="n">{{ f.balance|rs }}</td><td>{{ f.status_label }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% endif %}
+  <div class="sign" style="--cols:3"><div>Parent / guardian</div><div>Admission office</div><div>Principal</div></div>
+</div>
+{% endblock %}

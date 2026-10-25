@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}{{ test.name }}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:test_list' %}">Tests</a><a href="{{ test.classroom.get_absolute_url }}">{{ test.classroom }}</a><span>{{ test.name }}</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <div class="me-auto">
+    <h1 class="page-title">{{ test.name }}</h1>
+    <div class="text-muted"><span class="class-dot" style="background:{{ test.classroom.colour }}"></span><a href="{{ test.classroom.get_absolute_url }}">{{ test.classroom }}</a> · {{ test.get_kind_display }} · {{ test.date|date:"d M Y" }}</div>
+  </div>
+  <a class="btn btn-primary" href="{% url 'office:marks_entry' test.pk %}"><i class="bi bi-pencil-square me-1"></i>Enter marks</a>
+  <a class="btn btn-light" href="{% url 'office:result_sheet' test.pk %}"><i class="bi bi-printer me-1"></i>Result sheet</a>
+  <a class="btn btn-light" href="{% url 'office:result_cards' test.pk %}"><i class="bi bi-printer me-1"></i>All result cards</a>
+  <a class="btn btn-light" href="{% url 'office:test_edit' test.pk %}" aria-label="Edit test"><i class="bi bi-gear"></i></a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value">{{ entered }} / {{ rows|length }}</span><span class="label">Students with marks</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value">{{ average|pct }}</span><span class="label">Class average</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure good"><span class="value">{{ passed }}</span><span class="label">Passed ({{ school.pass_percent }}% or more)</span></div></div>
+  <div class="col-6 col-lg-3"><div class="figure"><span class="value fs-5">{% for r in top %}{{ r.position|ordinal }} {{ r.student.name }}{% if not forloop.last %}<br>{% endif %}{% empty %}–{% endfor %}</span><span class="label">Top positions</span></div></div>
+</div>
+
+<section class="panel">
+  <div class="table-responsive">
+    <table class="table table-hover table-sm align-middle">
+      <thead><tr><th class="ps-3">Roll</th><th>Student</th>{% for s in subjects %}<th class="money">{{ s.name }}<div class="fw-normal">/{{ s.full_marks|num }}</div></th>{% endfor %}<th class="money">Total</th><th class="money">%</th><th>Grade</th><th>Position</th><th class="no-print"></th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="ps-3 text-muted">{{ r.student.roll_no|default:"–" }}</td>
+          <td><a class="row-link" href="{{ r.student.get_absolute_url }}">{{ r.student.name }}</a>{% if r.remark %}<div class="small text-muted">{{ r.remark }}</div>{% endif %}</td>
+          {% for s in subjects %}{% with m=r.marks|get_item:s.pk %}
+            <td class="money">{% if m %}{% if m.absent %}<span class="text-muted">Abs</span>{% else %}{{ m.obtained|num }}{% endif %}{% else %}<span class="text-muted">·</span>{% endif %}</td>
+          {% endwith %}{% endfor %}
+          <td class="money">{% if r.percent is not None %}{{ r.obtained|num }}/{{ r.total|num }}{% endif %}</td>
+          <td class="money fw-semibold">{{ r.percent|pct }}</td>
+          <td>{% if r.percent is not None %}<span class="chip {% if r.passed %}chip-pass{% else %}chip-fail{% endif %}">{{ r.grade }}</span>{% endif %}</td>
+          <td class="fw-semibold">{% if r.position %}{{ r.position|ordinal }}{% endif %}</td>
+          <td class="text-end no-print">{% if r.percent is not None %}<a class="btn btn-sm btn-light" href="{% url 'office:result_cards' test.pk %}?student={{ r.student.pk }}"><i class="bi bi-printer me-1"></i>Card</a>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="99"><div class="empty">No students.</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+<p class="small text-muted mt-2">A dot means marks aren't entered yet. Position is worked out from the percentage; equal percentages share a position.</p>
+{% endblock %}

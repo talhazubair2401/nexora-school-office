@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Certificates{% endblock %}
+{% block crumbs %}<a href="{% url 'office:certificate_list' %}">Certificates</a>{% if pick %}<span>New {{ pick_label }}</span>{% endif %}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Certificates &amp; letters</h1>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-6"><section class="panel h-100">
+    <div class="panel-head"><h2><i class="bi bi-mortarboard me-1"></i>For students</h2></div>
+    <div class="panel-body d-flex flex-wrap gap-2">{% for k, l in student_kinds %}<a class="btn {% if pick == k %}btn-indigo{% else %}btn-light{% endif %}" href="?pick={{ k }}">{{ l }}</a>{% endfor %}</div>
+  </section></div>
+  <div class="col-lg-6"><section class="panel h-100">
+    <div class="panel-head"><h2><i class="bi bi-person-badge me-1"></i>For teachers and staff</h2></div>
+    <div class="panel-body d-flex flex-wrap gap-2">{% for k, l in teacher_kinds %}<a class="btn {% if pick == k %}btn-indigo{% else %}btn-light{% endif %}" href="?pick={{ k }}">{{ l }}</a>{% endfor %}</div>
+  </section></div>
+</div>
+
+{% if pick %}
+<section class="panel mb-3" style="border-color:var(--indigo-3)">
+  <div class="panel-head"><h2>New {{ pick_label }} — who is it for?</h2></div>
+  <form method="get" class="panel-body">
+    <input type="hidden" name="pick" value="{{ pick }}">
+    <div class="input-group"><input class="form-control" name="pq" value="{{ pq }}" autofocus placeholder="Type the {% if found_teachers or pick == 'EXP' or pick == 'REL' or pick == 'APP' %}teacher's{% else %}student's{% endif %} name{% if pick != 'EXP' and pick != 'REL' and pick != 'APP' %} or admission no.{% endif %}"><button class="btn btn-primary" type="submit">Find</button></div>
+  </form>
+  {% if pq %}
+  <ul class="list-group list-group-flush">
+    {% for s in found_students %}<li class="list-group-item d-flex align-items-center gap-2"><span class="class-dot" style="background:{{ s.classroom.colour|default:'#999' }}"></span><span class="me-auto"><b>{{ s.name }}</b> <span class="text-muted">· {{ s.father_name }} · {{ s.classroom|default:"" }} · {{ s.admission_no }} · {{ s.get_status_display }}</span></span><a class="btn btn-sm btn-primary" href="{% url 'office:certificate_new' pick %}?student={{ s.pk }}">Choose</a></li>{% endfor %}
+    {% for t in found_teachers %}<li class="list-group-item d-flex align-items-center gap-2"><span class="me-auto"><b>{{ t.name }}</b> <span class="text-muted">· {{ t.subjects }} · {{ t.get_status_display }}</span></span><a class="btn btn-sm btn-primary" href="{% url 'office:certificate_new' pick %}?teacher={{ t.pk }}">Choose</a></li>{% endfor %}
+    {% if not found_students and not found_teachers %}<li class="list-group-item text-muted">Nobody found for “{{ pq }}”.</li>{% endif %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head"><h2>Register of certificates issued</h2>
+    <form method="get" class="d-flex gap-2" data-autosubmit>
+      <input class="form-control form-control-sm" name="q" value="{{ q }}" placeholder="Name or serial no." style="width:200px">
+      <select class="form-select form-select-sm" name="kind" style="width:auto"><option value="">All kinds</option>{% for k, l in kinds %}<option value="{{ k }}" {% if k == kind %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    </form></div>
+  <div class="table-responsive"><table class="table table-hover mb-0">
+    <thead><tr><th class="ps-3">Serial no.</th><th>Date</th><th>Certificate</th><th>Issued to</th><th></th></tr></thead>
+    <tbody>
+    {% for c in certs %}
+      <tr><td class="ps-3 fw-semibold">{{ c.serial_no }}</td><td>{{ c.issued_on|date:"d M Y" }}</td><td>{{ c.get_kind_display }}</td>
+        <td>{% if c.student %}<a href="{{ c.student.get_absolute_url }}">{{ c.person_name }}</a> <span class="text-muted small">{{ c.student.classroom|default:"" }}</span>{% elif c.teacher and access.owner %}<a href="{{ c.teacher.get_absolute_url }}">{{ c.person_name }}</a>{% else %}{{ c.person_name }}{% endif %}</td>
+        <td class="text-end pe-3 text-nowrap"><a class="btn btn-sm btn-light" href="{% url 'office:certificate_print' c.pk %}"><i class="bi bi-printer me-1"></i>Print again</a>
+          {% if access.owner %}<a class="btn btn-sm btn-light text-danger" href="{% url 'office:certificate_delete' c.pk %}" aria-label="Remove"><i class="bi bi-x-lg"></i></a>{% endif %}</td></tr>
+    {% empty %}
+      <tr><td colspan="5"><div class="empty"><i class="bi bi-award"></i>No certificates issued yet. Choose a kind above, or use the “Certificate” button on a student's or teacher's page.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

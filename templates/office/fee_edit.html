@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Edit fee{% endblock %}
+{% block crumbs %}{% if fee.student.classroom %}<a href="{{ fee.student.classroom.get_absolute_url }}">{{ fee.student.classroom }}</a>{% endif %}<a href="{{ fee.student.get_absolute_url }}">{{ fee.student.name }}</a><span>Edit fee {{ fee.month|date:"F Y" }}</span>{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <h1 class="page-title mb-1">{{ fee.student.name }} — {{ fee.month|date:"F Y" }}</h1>
+    <p class="text-muted">Change the fee or give a discount for this month only. To change it for every future month, edit the student instead.</p>
+    <form method="post" class="panel">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+      <div class="panel-body row g-3">{% include "partials/fields.html" with fields=form %}</div>
+      <div class="panel-body border-top d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <a class="btn btn-light" href="{{ next|default:fee.student.get_absolute_url }}">Cancel</a>
+        <a class="btn btn-light text-danger ms-auto" href="{% url 'office:fee_delete' fee.pk %}?next={{ next|urlencode }}">Remove this month</a>
+      </div>
+    </form>
+    <p class="small text-muted mt-2">Already received for this month: {{ fee.paid|rs }}.{% if fee.extra %} Paper fund / fines added to this month: {{ fee.extra|rs }} (change them on the student's page).{% endif %}</p>
+  </div>
+</div>
+{% endblock %}

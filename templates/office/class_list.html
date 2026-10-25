@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Classes{% endblock %}
+{% block crumbs %}<span>Classes</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Classes &amp; subjects</h1>
+  {% if access.owner %}<a class="btn btn-light" href="{% url 'office:promote' %}"><i class="bi bi-arrow-up-circle me-1"></i>Promote to next class (new school year)</a>
+  <a class="btn btn-primary" href="{% url 'office:class_create' %}"><i class="bi bi-plus-lg me-1"></i>New class</a>{% endif %}
+</div>
+<div class="row g-3">
+  {% for c in classes %}
+  <div class="col-md-6 col-xl-4">
+    <a class="board" href="{{ c.get_absolute_url }}">
+      <div class="band" style="background: {{ c.colour }}; color: {{ c.colour|text_on }}"><h3>{{ c.name }}</h3><span>{{ c.n }} students</span></div>
+      <div class="body">
+        <div class="d-flex justify-content-between"><span>Boys {{ c.boys }} · Girls {{ c.girls }}</span><span>Usual fee {{ c.default_fee|rs }}</span></div>
+        <div class="mt-1">{{ c.n_subjects }} subject{{ c.n_subjects|pluralize }}{% if c.class_teacher %} · Class teacher: {{ c.class_teacher }}{% endif %}</div>
+      </div>
+    </a>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="panel empty"><i class="bi bi-grid"></i>No classes yet.</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

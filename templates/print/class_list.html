@@ -1,0 +1,34 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Class list — {{ classroom.name }}{% endblock %}
+{% block toolbar %}
+  <form method="get" class="tb-options">
+    <label>Order <select name="order" onchange="this.form.submit()"><option value="roll" {% if order == "roll" %}selected{% endif %}>Roll no.</option><option value="name" {% if order == "name" %}selected{% endif %}>Name A–Z</option></select></label>
+    <input type="hidden" name="due" value="0">
+    <label><input type="checkbox" name="due" value="1" {% if show_due %}checked{% endif %} onchange="this.form.submit()"> Fee due column</label>
+  </form>
+{% endblock %}
+{% block sheets %}
+<div class="sheet">
+  {% include "print/_head.html" %}
+  <div class="doc-title" style="background: {{ classroom.colour }}; color: {{ classroom.colour|text_on }}">CLASS LIST — {{ classroom.name|upper }}</div>
+  <table class="info" style="margin-bottom:8px">
+    <tr><td class="k">Students</td><td class="v">{{ rows|length }} (boys {{ boys }}, girls {{ girls }})</td><td class="k">Class teacher</td><td class="v">{{ classroom.class_teacher|default:"" }}</td></tr>
+  </table>
+  <table class="grid">
+    <thead><tr><th class="c">#</th><th class="c">Roll</th><th>Student name</th><th>Father's name</th><th>Phone</th><th class="n">Monthly fee</th>{% if show_due %}<th class="c">{{ month|date:"M" }}</th><th class="n">Fee due</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td class="c">{{ forloop.counter }}</td><td class="c">{{ r.s.roll_no|default:"" }}</td><td><b>{{ r.s.name }}</b></td><td>{{ r.s.father_name }}</td><td style="white-space:nowrap">{{ r.s.phone }}</td>
+        <td class="n">{% if r.s.monthly_fee %}{{ r.s.net_fee|rs }}{% if r.s.discount %}<div class="small">({{ r.s.discount|rs }} off)</div>{% endif %}{% else %}–{% endif %}</td>
+        {% if show_due %}<td class="c small">{% if r.fee %}{{ r.fee.status_label }}{% else %}–{% endif %}</td><td class="n {% if r.due %}low{% endif %}">{% if r.due %}{{ r.due|rs }}{% else %}–{% endif %}</td>{% endif %}</tr>
+    {% empty %}
+      <tr><td colspan="8" class="c">No students in this class.</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="5">Total ({{ rows|length }} students)</td><td class="n">{{ total_fee|rs }}</td>{% if show_due %}<td></td><td class="n">{{ total_due|rs }}</td>{% endif %}</tr></tfoot>
+  </table>
+  <div class="sign"><div>Class teacher</div><div>Principal</div></div>
+  <p class="small">Printed {% now "d-m-Y" %}.</p>
+</div>
+{% endblock %}

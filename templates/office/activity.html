@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Recent activity{% endblock %}
+{% block crumbs %}<span>Recent activity</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Recent activity</h1>
+  <span class="text-muted">Fees received today (recorded here): <b class="text-success">{{ today_fees|rs }}</b></span>
+</div>
+<p class="text-muted">Everything done in the office system is written here automatically — newest first — with <b>who</b> did it and when. Nobody can delete this list.</p>
+{% if staff_names %}<div class="d-flex flex-wrap gap-1 mb-2"><span class="small text-muted me-1 align-self-center">Show only:</span><a class="btn btn-sm {% if not who %}btn-indigo{% else %}btn-light{% endif %}" href="?kind={{ kind }}">Everyone</a>{% for n in staff_names %}<a class="btn btn-sm {% if who == n %}btn-indigo{% else %}btn-light{% endif %}" href="?who={{ n|urlencode }}&amp;kind={{ kind }}">{{ n }}</a>{% endfor %}</div>{% endif %}
+<form method="get" class="panel panel-body mb-3" data-autosubmit>
+  <div class="row g-2 align-items-end">
+    <div class="col-md-6"><label class="form-label" for="q">Look for</label><input class="form-control" id="q" name="q" value="{{ q }}" placeholder="e.g. a student's name, receipt no., “backup”"></div>
+    <div class="col-md-4"><label class="form-label" for="kind">Type</label>
+      <select class="form-select" id="kind" name="kind"><option value="">Everything</option>{% for v, l in kinds %}<option value="{{ v }}" {% if v == kind %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Show</button></div>
+  </div>
+</form>
+<section class="panel">
+  {% for d in days %}
+    <div class="activity-day">{% if d.day == today %}Today{% elif d.day == yesterday %}Yesterday{% else %}{{ d.day|date:"l, d F Y" }}{% endif %}</div>
+    {% for a in d.items %}
+      <div class="activity-row">
+        <span class="time">{{ a.at|date:"h:i A" }}</span>
+        <span class="ico {{ a.kind }}" aria-hidden="true"><i class="bi bi-{{ a.icon }}"></i></span>
+        <span class="text">{{ a.text }}{% if a.who %} <span class="who-tag {% if a.who == 'Principal' %}owner{% endif %}">{{ a.who }}</span>{% endif %}</span>
+        {% if a.amount %}<span class="fw-bold text-nowrap">{{ a.amount|rs }}</span>{% endif %}
+        {% if a.link %}<a class="btn btn-sm btn-light" href="{{ a.link }}">Open</a>{% endif %}
+      </div>
+    {% endfor %}
+  {% empty %}
+    <div class="empty"><i class="bi bi-clock-history"></i>Nothing recorded yet. From now on, every fee received, admission, change, promotion, certificate and backup appears here.</div>
+  {% endfor %}
+  {% include "partials/pagination.html" %}
+</section>
+{% endblock %}

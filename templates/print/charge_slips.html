@@ -1,0 +1,27 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Paper fund / fine slips{% endblock %}
+{% block head %}<style>@page { size: A5 portrait; margin: 8mm; }</style>{% endblock %}
+{% block sheets %}
+{% for sl in slips %}
+<div class="sheet a5">
+  {% include "print/_head.html" %}
+  <div class="doc-title" style="background:var(--red)">PAYMENT DUE — PAPER FUND / FINE</div>
+  <table class="info">
+    <tr><td class="k">Student</td><td class="v" colspan="3">{{ sl.s.name }}</td></tr>
+    <tr><td class="k">Father's name</td><td class="v" colspan="3">{{ sl.s.father_name|default:"" }}</td></tr>
+    <tr><td class="k">Class</td><td class="v">{{ sl.s.classroom|default:"" }}</td><td class="k">Adm. no.</td><td class="v">{{ sl.s.admission_no }}</td></tr>
+    <tr><td class="k">Issued on</td><td class="v" colspan="3">{{ issued|date:"d-m-Y" }}</td></tr>
+  </table>
+  <table class="grid" style="margin-top:10px">
+    <thead><tr><th>Date</th><th>For</th><th class="n">Amount</th></tr></thead>
+    <tbody>{% for i in sl.items %}<tr><td>{{ i.date|date:"d-m-Y" }}</td><td>{{ i.get_kind_display }}{% if i.reason %} — {{ i.reason }}{% endif %}</td><td class="n">{{ i.amount|rs }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <div class="total-box due"><span>Total amount due</span><span>{{ sl.total|rs }}</span></div>
+  <div class="words small">{% money_words sl.total %}</div>
+  <p class="small" style="margin-top:8px">Please pay at the school office. This is separate from the monthly fee.</p>
+  <div class="stamp-row"><div class="stamp unpaid">UNPAID</div></div>
+  <div class="sign"><div>Accounts office</div><div>Principal</div></div>
+</div>
+{% endfor %}
+{% endblock %}

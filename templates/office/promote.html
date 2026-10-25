@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Promote to next class{% endblock %}
+{% block back_fallback %}{% url 'office:class_list' %}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:class_list' %}">Classes</a><span>Promote to next class</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+  <h1 class="page-title me-auto">Promote to next class — new school year {{ year }}–{{ year|add:1 }}</h1>
+  <form method="get" data-autosubmit><label class="visually-hidden" for="year">School year</label>
+    <select class="form-select" id="year" name="year">{% for y in years %}<option value="{{ y }}" {% if y == year %}selected{% endif %}>April {{ y }} – March {{ y|add:1 }}</option>{% endfor %}</select></form>
+</div>
+<p class="text-muted">Every studying student moves up one class. Class 10 (the last class) is marked <b>Passed out</b>. <b>Untick</b> anyone who should stay in the same class. Nothing is deleted: fees, results and the old class stay in each student's history, and you can undo this.</p>
+
+{% if done %}
+<div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
+  <span class="me-auto"><strong>Already done for {{ year }}–{{ year|add:1 }}</strong> on {{ done.done_on|date:"d M Y" }}. Doing it again would move everyone up a second time.</span>
+  {% if last and last.pk == done.pk %}<form method="post" action="{% url 'office:promote_undo' done.pk %}" data-confirm="Put every student back in the class they were in before this promotion?" data-confirm-yes="Yes, undo it" data-confirm-danger="1">{% csrf_token %}<button class="btn btn-light text-danger" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Undo this promotion</button></form>{% endif %}
+</div>
+{% endif %}
+
+<form method="post" data-confirm="Promote &lt;b&gt;{{ total }}&lt;/b&gt; studying students to their next class for {{ year }}–{{ year|add:1 }}?&lt;br&gt;&lt;span class='small text-muted'&gt;Unticked students stay where they are. Class 10 students become “Passed out”. You can undo this afterwards.&lt;/span&gt;" data-confirm-yes="Yes, promote">{% csrf_token %}
+  <input type="hidden" name="year" value="{{ year }}">
+  <section class="panel panel-body mb-3">
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="new_fee" value="1" id="new_fee" checked><label class="form-check-label" for="new_fee">Give promoted students the <b>usual fee of their new class</b> (their own discount stays). If the new class has no usual fee set, the fee stays the same.</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="renumber" value="1" id="renumber"><label class="form-check-label" for="renumber">Give new roll numbers A to Z in every class</label></div>
+    {% if done %}<div class="form-check mt-2"><input class="form-check-input" type="checkbox" name="again" value="1" id="again"><label class="form-check-label text-danger" for="again">I know it was already done for this year — promote again</label></div>{% endif %}
+  </section>
+
+  {% for row in plan %}{% with c=row.c %}
+  <section class="panel mb-2 promo-class" style="--c: {{ c.colour }}">
+    <div class="panel-head">
+      <h2><span class="class-dot" style="background:{{ c.colour }}"></span>{{ c.name }} <span class="arrow">→</span> {% if row.next %}{{ row.next.name }}{% if row.next.default_fee %} <span class="small text-muted fw-normal">(usual fee {{ row.next.default_fee|rs }})</span>{% endif %}{% else %}<span class="chip chip-PASSED">Passed out</span>{% endif %}</h2>
+      <span class="small text-muted">{{ row.students|length }} student{{ row.students|length|pluralize }}{% if row.students %} · <a href="#" data-toggle-all="cls-{{ c.pk }}">tick / untick all</a>{% endif %}</span>
+    </div>
+    {% if row.students %}
+    <div class="panel-body promo-list" id="cls-{{ c.pk }}">
+      {% for s in row.students %}<input type="hidden" name="seen" value="{{ s.pk }}">
+        <label><input class="form-check-input mt-0" type="checkbox" name="move" value="{{ s.pk }}" checked> <span>{{ s.name }}{% if s.father_name %} <span class="text-muted small">· {{ s.father_name }}</span>{% endif %}</span></label>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endwith %}{% endfor %}
+  <div class="sticky-save mt-3"><span class="me-auto">{{ total }} studying students. Ticked = move up, unticked = stay in the same class.</span>
+    <button class="btn btn-light btn-lg" type="submit"><i class="bi bi-arrow-up-circle me-1"></i>Promote classes</button></div>
+</form>
+
+{% if batches %}
+<section class="panel mt-4">
+  <div class="panel-head"><h2>Earlier promotions</h2></div>
+  <table class="table mb-0"><tbody>
+  {% for b in batches %}<tr><td class="ps-3">{{ b.session_year }}–{{ b.session_year|add:1 }}</td><td>done {{ b.done_on|date:"d M Y" }}</td><td>{{ b.entries.count }} students</td><td>{% if b.undone_at %}<span class="chip chip-muted">undone {{ b.undone_at|date:"d M Y" }}</span>{% else %}<span class="chip chip-PAID">in effect</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script>
+document.querySelectorAll("[data-toggle-all]").forEach((a) => a.addEventListener("click", (e) => {
+  e.preventDefault();
+  const boxes = document.querySelectorAll("#" + a.dataset.toggleAll + " input[type=checkbox]");
+  const allOn = Array.from(boxes).every((b) => b.checked);
+  boxes.forEach((b) => (b.checked = !allOn));
+}));
+</script>{% endblock %}

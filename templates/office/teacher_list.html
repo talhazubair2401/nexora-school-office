@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Teachers{% endblock %}
+{% block crumbs %}<span>Teachers</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Teachers</h1>
+  <a class="btn btn-light" href="{% url 'office:salary_month' %}"><i class="bi bi-wallet2 me-1"></i>Salaries</a>
+  <a class="btn btn-primary" href="{% url 'office:teacher_create' %}"><i class="bi bi-person-plus me-1"></i>Add a teacher</a>
+</div>
+<form method="get" class="panel panel-body mb-3" data-autosubmit>
+  <div class="row g-2 align-items-end">
+    <div class="col-md-6"><label class="form-label" for="q">Search</label><input class="form-control" id="q" name="q" value="{{ q }}" placeholder="Name, phone, subject, CNIC"></div>
+    <div class="col-md-3"><label class="form-label" for="show">Show</label>
+      <select class="form-select" id="show" name="show"><option value="ACTIVE" {% if show == "ACTIVE" %}selected{% endif %}>Working now</option><option value="LEFT" {% if show == "LEFT" %}selected{% endif %}>Left</option><option value="" {% if not show %}selected{% endif %}>Everyone</option></select></div>
+    <div class="col-md-3"><button class="btn btn-primary w-100" type="submit">Search</button></div>
+  </div>
+</form>
+<section class="panel">
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>Name</th><th>Subjects</th><th>Qualification</th><th>Phone</th><th>Joined</th><th class="money">Salary</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for t in teachers %}
+        <tr>
+          <td><a class="row-link" href="{{ t.get_absolute_url }}">{{ t.name }}</a>{% if t.father_name %}<div class="small text-muted">Father: {{ t.father_name }}</div>{% endif %}</td>
+          <td>{{ t.subjects|default:"–" }}</td><td>{{ t.qualification|default:"–" }}</td><td>{{ t.phone|default:"–" }}</td>
+          <td>{{ t.joining_date|date:"d M Y"|default:"–" }}</td>
+          <td class="money">{{ t.salary|rs }}</td>
+          <td><span class="chip chip-{{ t.status }}">{{ t.get_status_display }}</span></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7"><div class="empty"><i class="bi bi-person-badge"></i>No teachers yet. <a href="{% url 'office:teacher_create' %}">Add a teacher</a>.</div></td></tr>
+      {% endfor %}
+      </tbody>
+      {% if teachers %}<tfoot><tr><td colspan="5">Total monthly salaries (working teachers)</td><td class="money">{{ salary_total|rs }}</td><td></td></tr></tfoot>{% endif %}
+    </table>
+  </div>
+</section>
+{% endblock %}

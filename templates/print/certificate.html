@@ -1,0 +1,58 @@
+{% extends "print/base_print.html" %}
+{% load static office_tags %}
+{% block title %}{{ title }}{% if d.name %} — {{ d.name }}{% endif %}{% endblock %}
+{% block head %}<style>
+  @page { size: A4 portrait; margin: 9mm; }
+  {% if embed %}.toolbar { display: none; } body { background: #e9ebf2; } .sheet { margin: 8px auto; }{% endif %}
+  {% if editable %}.cert-body { outline: 2px dashed #c98a0b; outline-offset: 6px; border-radius: 2px; cursor: text; }
+  .cert-body:focus { outline-color: #2f7d3a; }{% endif %}
+</style>
+{% if embed %}<script>
+  // fit the A4 page into the preview box
+  const fit = () => { const w = 210 * 3.78 + 24; document.documentElement.style.zoom = Math.min(1, window.innerWidth / w); };
+  window.addEventListener("resize", fit); fit();
+  document.addEventListener("DOMContentLoaded", () => {
+    fit();
+    // warn when the text no longer fits on one A4 page
+    const frame = document.querySelector(".cert-frame"), sheet = document.querySelector(".sheet");
+    const check = () => {
+      const tall = frame.scrollHeight > 277 * 3.78 + 2;
+      let tag = document.querySelector(".too-long");
+      if (tall && !tag) { tag = document.createElement("div"); tag.className = "too-long"; tag.textContent = "Too long for one page — shorten the text"; sheet.appendChild(tag); }
+      if (!tall && tag) tag.remove();
+    };
+    check();
+    const body = document.querySelector(".cert-body");
+    if (body) body.addEventListener("input", check);
+  });
+</script>{% endif %}{% endblock %}
+{% block toolbar %}{% if cert %}<a href="{% url 'office:certificate_edit' cert.pk %}">✎ Change the text</a>{% endif %}{% endblock %}
+{% block sheets %}
+<div class="sheet cert">
+  <div class="cert-frame">
+    {% if school.letterhead %}
+      <img class="letterhead" src="{{ school.letterhead.url }}" alt="">
+    {% else %}
+      <img class="letterhead" src="{% static 'img/letterhead_top.png' %}" alt="{{ school.name }}">
+    {% endif %}
+
+    <div class="cert-ref">
+      <span>Ref No: {% if serial %}<b class="val">{{ serial }}</b>{% else %}<span class="blank" style="min-width:30mm"></span>{% endif %}</span>
+      {% if not teacher_doc %}<span>Admission No: {{ d.admission_no|fill:"28mm" }}</span>{% endif %}
+      <span>Date: {{ d.issued_on|fill_date }}</span>
+    </div>
+
+    <div class="cert-body"{% if editable %} contenteditable="true" spellcheck="true"{% endif %}>
+      {% if body_html %}{{ body_html }}{% else %}{% include "print/_cert_body.html" %}
+      {% if d.remarks %}<p class="cert-text"><i>{{ d.remarks|linebreaksbr }}</i></p>{% endif %}{% endif %}
+    </div>
+
+    <div class="cert-sign">
+      <div class="seal">School seal</div>
+      <div class="principal"><div class="line"></div>Principal</div>
+    </div>
+    {% if not school.letterhead %}<img class="letterhead-foot" src="{% static 'img/letterhead_bottom.png' %}" alt="">{% endif %}
+  </div>
+  {% if preview %}<div class="preview-tag">{% if editable %}PREVIEW — click the text to change it{% else %}PREVIEW — not issued yet{% endif %}</div>{% endif %}
+</div>
+{% endblock %}

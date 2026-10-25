@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Tests{% endblock %}
+{% block crumbs %}<span>Tests &amp; results</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Tests &amp; results</h1>
+  <a class="btn btn-primary" href="{% url 'office:test_create' %}{% if cls %}?class={{ cls }}{% endif %}"><i class="bi bi-journal-plus me-1"></i>New test</a>
+</div>
+<form method="get" class="panel panel-body mb-3" data-autosubmit>
+  <div class="row g-2 align-items-end">
+    <div class="col-md-5"><label class="form-label" for="cls">Class</label>
+      <select class="form-select" id="cls" name="class"><option value="">All classes</option>{% for c in classes %}<option value="{{ c.pk }}" {% if c.pk|stringformat:"s" == cls %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-5"><label class="form-label" for="kind">Type</label>
+      <select class="form-select" id="kind" name="kind"><option value="">All types</option>{% for v, l in kinds %}<option value="{{ v }}" {% if v == kind %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Show</button></div>
+  </div>
+</form>
+<section class="panel">
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>Test</th><th>Class</th><th>Type</th><th>Date</th><th>Subjects</th><th></th></tr></thead>
+      <tbody>
+      {% for t in tests %}
+        <tr>
+          <td><a class="row-link" href="{{ t.get_absolute_url }}">{{ t.name }}</a></td>
+          <td><span class="class-dot" style="background:{{ t.classroom.colour }}"></span>{{ t.classroom }}</td>
+          <td>{{ t.get_kind_display }}</td><td>{{ t.date|date:"d M Y" }}</td>
+          <td class="small text-muted">{% for s in t.subjects.all %}{{ s.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-primary" href="{% url 'office:marks_entry' t.pk %}">Enter marks</a>
+            <a class="btn btn-sm btn-light" href="{{ t.get_absolute_url }}">Results</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6"><div class="empty"><i class="bi bi-journal-check"></i>No tests yet. <a href="{% url 'office:test_create' %}">Make the first one</a>.</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

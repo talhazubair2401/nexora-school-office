@@ -1,0 +1,26 @@
+{% extends "print/base_print.html" %}
+{% block title %}Attendance register {% if teachers %}teachers{% else %}{{ c.name }}{% endif %} {{ month|date:"F Y" }}{% endblock %}
+{% block head %}<style>
+@page { size: A4 landscape; margin: 8mm; }
+.sheet.wide { width: 281mm; min-height: auto; }
+table.reg { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+table.reg th, table.reg td { border: 1px solid #999; padding: 2px 1px; text-align: center; }
+table.reg td.who, table.reg th.who { text-align: left; padding: 2px 4px; white-space: nowrap; font-size: 9pt; }
+table.reg .sun { background: #e6e7ee; }
+table.reg .A { color: #b42318; font-weight: 700; }
+table.reg .L { color: #8a5a00; font-weight: 700; }
+table.reg small { display: block; font-size: 6.5pt; color: #555; }
+</style>{% endblock %}
+{% load office_tags %}
+{% block sheets %}
+<div class="sheet wide">
+  {% include "print/_head.html" %}
+  <div class="doc-title">ATTENDANCE REGISTER — {% if teachers %}TEACHERS{% else %}{{ c.name|upper }}{% endif %} — {{ month|date:"F Y"|upper }}</div>
+  <table class="reg">
+    <thead><tr><th class="who">{% if teachers %}Teacher{% else %}Student{% endif %}</th>{% for d in days %}<th class="{% if d.weekday == 6 %}sun{% endif %}">{{ d.day }}<small>{{ d|date:"D"|slice:":2" }}</small></th>{% endfor %}<th>P</th><th>A</th><th>L</th><th>%</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td class="who">{% if not teachers and r.p.roll_no %}{{ r.p.roll_no }}. {% endif %}{{ r.p.name }}</td>{% for c in r.cells %}<td class="{% if c.sun %}sun{% endif %} {{ c.s }}">{{ c.s }}</td>{% endfor %}<td>{{ r.present }}</td><td>{{ r.absent|default:"" }}</td><td>{{ r.leave|default:"" }}</td><td><b>{% if r.percent is not None %}{{ r.percent }}%{% endif %}</b></td></tr>{% endfor %}</tbody>
+  </table>
+  <p class="small">P = present{% if teachers %} (T = late, counted as present){% endif %} · A = absent · L = leave · grey = Sunday.</p>
+  <div class="sign"><div>{% if teachers %}Office{% else %}Class teacher{% endif %}</div><div>Principal</div></div>
+</div>
+{% endblock %}

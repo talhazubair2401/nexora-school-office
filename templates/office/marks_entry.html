@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Marks — {{ test.name }}{% endblock %}
+{% block crumbs %}<a href="{% url 'office:test_list' %}">Tests</a><a href="{{ test.get_absolute_url }}">{{ test.name }} · {{ test.classroom }}</a><span>Marks</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <div class="me-auto">
+    <h1 class="page-title">{{ test.name }}</h1>
+    <div class="text-muted"><span class="class-dot" style="background:{{ test.classroom.colour }}"></span>{{ test.classroom }} · {{ test.get_kind_display }} · {{ test.date|date:"d M Y" }}</div>
+  </div>
+  <a class="btn btn-light" href="{% url 'office:test_edit' test.pk %}"><i class="bi bi-pencil me-1"></i>Subjects &amp; full marks</a>
+  <a class="btn btn-light" href="{{ test.get_absolute_url }}"><i class="bi bi-trophy me-1"></i>Results</a>
+</div>
+{% if not subjects %}
+  <div class="panel empty"><i class="bi bi-journal-x"></i>This test has no subjects. <a href="{% url 'office:test_edit' test.pk %}">Add subjects</a> first.</div>
+{% else %}
+<form method="post" class="panel" data-warn>{% csrf_token %}
+  <div class="table-responsive" style="max-height: calc(100vh - 240px)">
+    <table class="table table-sm marks-grid mb-0">
+      <thead class="sticky-top">
+        <tr>
+          <th class="stu">Student</th>
+          {% for sub in subjects %}<th class="text-center">{{ sub.name }}<div class="fw-normal small">out of {{ sub.full_marks|num }}</div></th>{% endfor %}
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in grid %}{% with rowi=forloop.counter %}
+        <tr>
+          <td class="stu"><span class="text-muted small me-1">{{ row.student.roll_no|default:"" }}</span><strong>{{ row.student.name }}</strong></td>
+          {% for c in row.cells %}
+            <td>
+              <div class="mark-cell justify-content-center">
+                <input class="form-control mark-in {% if c.error %}is-invalid{% endif %}" id="{{ c.key }}" name="{{ c.key }}" value="{{ c.value }}"
+                       inputmode="decimal" autocomplete="off" data-row="{{ rowi }}" data-col="{{ forloop.counter }}" data-full="{{ c.full }}"
+                       aria-label="{{ row.student.name }} {{ c.name }}" title="{% if c.error %}Must be {{ c.error }}{% endif %}">
+                <label class="abs-toggle" title="Absent"><input type="checkbox" class="form-check-input" name="{{ c.akey }}" data-absent-for="{{ c.key }}" {% if c.absent %}checked{% endif %}>Abs</label>
+              </div>
+            </td>
+          {% endfor %}
+          <td><input class="form-control form-control-sm" name="r_{{ row.student.pk }}" value="{{ row.remark }}" maxlength="250" style="min-width:200px" aria-label="Remarks for {{ row.student.name }}"></td>
+        </tr>
+      {% endwith %}{% empty %}
+        <tr><td colspan="99"><div class="empty">No students in {{ test.classroom }}.</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="sticky-save">
+    <button class="btn btn-light fw-semibold" type="submit"><i class="bi bi-save me-1"></i>Save marks</button>
+    <button class="btn btn-primary" type="submit" name="finish" value="1">Save and see results</button>
+    <span class="small ms-auto" style="opacity:.85">Press Enter to go down a column. Leave a box empty if the paper isn't checked yet.</span>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

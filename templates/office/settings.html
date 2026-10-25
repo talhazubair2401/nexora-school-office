@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Settings{% endblock %}
+{% block crumbs %}<span>Settings</span>{% endblock %}
+{% block content %}
+<h1 class="page-title mb-3">Settings</h1>
+<div class="row g-3">
+  <div class="col-xl-8">
+    <section class="panel mb-3" id="backup">
+      <div class="panel-head"><h2><i class="bi bi-hdd me-1"></i>Backup of the records</h2>
+        <span class="small {% if school.last_backup_at %}text-muted{% else %}text-danger fw-semibold{% endif %}">{% if school.last_backup_at %}Last backup: {{ school.last_backup_at|date:"d M Y, H:i" }}{% else %}No backup made yet{% endif %}</span></div>
+      <form method="post" action="{% url 'office:backup' %}" class="panel-body">{% csrf_token %}
+        <p class="mb-2">Saves a dated copy of all records (and student photos) in a folder you choose — a USB stick is best. Your records on this computer are not changed.</p>
+        <label class="form-label" for="folder">Save the backup in this folder</label>
+        <div class="input-group">
+          <input class="form-control" id="folder" name="folder" value="{{ school.backup_folder }}" placeholder="e.g. E:\School backups" required>
+          {% if is_windows %}<button class="btn btn-light" type="button" id="choose-folder"><i class="bi bi-folder2-open me-1"></i>Choose folder…</button>{% endif %}
+        </div>
+        {% if drives %}<div class="mt-2 small">USB found: {% for d in drives %}<button type="button" class="btn btn-sm btn-light ms-1" data-folder="{{ d }}School backups"><i class="bi bi-usb-drive me-1"></i>{{ d }}</button>{% endfor %}</div>{% endif %}
+        <div class="form-text">A new folder like <code>School_backup_{% now "Y-m-d_H-i" %}</code> is made inside it each time, so old backups are never overwritten.</div>
+        <button class="btn btn-primary btn-lg mt-3" type="submit"><i class="bi bi-hdd me-1"></i>Back up now</button>
+      </form>
+    </section>
+
+    <form method="post" enctype="multipart/form-data" class="panel" data-warn>{% csrf_token %}
+      <div class="panel-head"><h2>Screen</h2><span class="small text-muted">Makes every button and all text bigger</span></div>
+      <div class="panel-body row g-3">
+        <div class="col-12">
+          <label class="form-label">Button and text size</label>
+          <div class="d-flex flex-wrap gap-2">
+            {% for v, l in form.fields.ui_size.choices %}
+              <input type="radio" class="btn-check" name="ui_size" id="ui-{{ v }}" value="{{ v }}" {% if form.ui_size.value == v %}checked{% endif %}>
+              <label class="btn btn-outline-primary" for="ui-{{ v }}" style="font-size:{% if v == 'large' %}1.15rem{% elif v == 'xlarge' %}1.35rem{% else %}1rem{% endif %}">Aa · {{ l }}</label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="panel-head border-top"><h2>School details</h2><span class="small text-muted">Printed on challans, receipts, slips, result cards and certificates</span></div>
+      <div class="panel-body row g-3">
+        {% include "partials/fields.html" with fields=form only="name,name_urdu,address,phone,motto,logo,letterhead,fee_due_day" %}
+      </div>
+      <div class="panel-head border-top"><h2>Results</h2></div>
+      <div class="panel-body row g-3">
+        {% include "partials/fields.html" with fields=form only="pass_percent,grade_scale" %}
+      </div>
+      <div class="panel-body border-top"><button class="btn btn-primary" type="submit">Save settings</button></div>
+    </form>
+  </div>
+  <div class="col-xl-4">
+    <section class="panel mb-3">
+      <div class="panel-head"><h2>Logo</h2></div>
+      <div class="panel-body text-center"><img src="{{ logo_url }}" alt="School logo" style="max-width:160px">
+        <p class="small text-muted mt-2 mb-0">Printed faintly in the background of every receipt, challan, list and certificate.</p></div>
+    </section>
+    {% if school.letterhead %}<section class="panel mb-3">
+      <div class="panel-head"><h2>Letterhead</h2></div>
+      <div class="panel-body"><img src="{{ school.letterhead.url }}" alt="Letterhead" class="img-fluid border"></div>
+    </section>{% endif %}
+    <section class="panel mb-3">
+      <div class="panel-head"><h2>Grades now in use</h2></div>
+      <table class="table table-sm mb-0">
+        {% for min, g in grades %}<tr><td class="ps-3">{{ min|floatformat:"0" }}% and above</td><td class="fw-bold">{{ g }}</td></tr>{% endfor %}
+      </table>
+    </section>
+    <section class="panel mb-3" id="about">
+      <div class="panel-head"><h2>About this software</h2></div>
+      <div class="panel-body">
+        <div class="maker-row mb-2">{% if maker.logo %}<img src="{{ maker.logo }}" alt="">{% else %}<span class="maker-mark" aria-hidden="true">N</span>{% endif %}<span class="maker-name">{{ maker.name }}</span></div>
+        <div class="small text-muted">School Office · version {{ maker.version }}</div>
+        {% if maker.email %}<div class="small mt-1"><i class="bi bi-envelope me-1"></i>Support: <a href="mailto:{{ maker.email }}">{{ maker.email }}</a></div>{% endif %}
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Password</h2></div>
+      <div class="panel-body"><a class="btn btn-light" href="{% url 'office:change_password' %}"><i class="bi bi-key me-1"></i>Change admin password</a>
+        <p class="small text-muted mt-2 mb-0">All records are saved on this computer in the file <code>db.sqlite3</code> inside the system's folder.</p></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+(function () {
+  const input = document.getElementById("folder");
+  document.querySelectorAll("[data-folder]").forEach((b) => b.addEventListener("click", () => { input.value = b.dataset.folder; }));
+  const btn = document.getElementById("choose-folder");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    btn.disabled = true;
+    const old = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Look for the window…';
+    fetch("{% url 'office:choose_folder' %}", { method: "POST", headers: { "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value } })
+      .then((r) => r.json()).then((d) => { if (d.folder) input.value = d.folder; else if (d.error) alert(d.error); })
+      .finally(() => { btn.disabled = false; btn.innerHTML = old; });
+  });
+})();
+</script>{% endblock %}

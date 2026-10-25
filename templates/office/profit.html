@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Profit{% endblock %}
+{% block crumbs %}<span>Profit</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Profit</h1>
+  <form method="get" class="d-flex gap-2" data-autosubmit>
+    <label class="visually-hidden" for="session">School year</label>
+    <select class="form-select" id="session" name="session">{% for y in sessions %}<option value="{{ y }}" {% if y == session %}selected{% endif %}>April {{ y }} – March {{ y|add:1 }}</option>{% endfor %}</select>
+  </form>
+  <a class="btn btn-light" href="?session={{ session }}&amp;print=1"><i class="bi bi-printer me-1"></i>Print</a>
+</div>
+<form method="post" action="{% url 'office:toggle_expenses' %}" class="panel panel-body mb-3 d-flex flex-wrap align-items-center gap-3">{% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <div class="form-check form-switch m-0">
+    <input class="form-check-input" type="checkbox" role="switch" id="exp-switch" name="on" value="1" {% if show_exp %}checked{% endif %} onchange="this.form.submit()">
+    <label class="form-check-label fw-semibold" for="exp-switch">Include other expenses (rent, bills …)</label>
+  </div>
+  <span class="text-muted small me-auto">Profit for each month = fees received (with paper fund &amp; fines) − salaries paid{% if show_exp %} − other expenses{% endif %} in that month.</span>
+  <a class="btn btn-sm btn-light" href="{% url 'office:expense_list' %}"><i class="bi bi-receipt-cutoff me-1"></i>Enter expenses</a>
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-{% if show_exp %}3{% else %}4{% endif %}"><div class="figure good"><span class="value">{{ totals.received|rs }}</span><span class="label">Fees received this school year</span></div></div>
+  <div class="col-md-{% if show_exp %}3{% else %}4{% endif %}"><div class="figure"><span class="value">{{ totals.salaries|rs }}</span><span class="label">Salaries paid</span></div></div>
+  {% if show_exp %}<div class="col-md-3"><div class="figure"><span class="value">{{ totals.expenses|rs }}</span><span class="label">Other expenses</span></div></div>{% endif %}
+  <div class="col-md-{% if show_exp %}3{% else %}4{% endif %}"><div class="figure {% if totals.profit < 0 %}bad{% else %}good{% endif %}"><span class="value">{{ totals.profit|rs }}</span><span class="label">Profit so far</span></div></div>
+</div>
+
+<section class="panel mb-3">
+  <div class="panel-body"><div style="position:relative;height:260px"><canvas id="profitChart" role="img" aria-label="Fees received, salaries paid and profit by month"></canvas></div></div>
+</section>
+
+<section class="panel">
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th class="ps-3">Month</th><th class="money">Fees billed</th><th class="money">Fees received</th><th class="money">Salaries paid</th>{% if show_exp %}<th class="money">Other expenses</th>{% endif %}<th class="money pe-3">Profit</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr {% if r.future %}class="text-muted"{% endif %}>
+          <td class="ps-3 fw-semibold">{{ r.month|date:"F Y" }}</td>
+          <td class="money">{% if r.billed %}{{ r.billed|rs }}{% else %}–{% endif %}</td>
+          <td class="money">{{ r.received|rs }}</td>
+          <td class="money">{{ r.salaries|rs }}</td>
+          {% if show_exp %}<td class="money">{% if r.expenses %}<a class="text-reset" href="{% url 'office:expense_list' %}?month={{ r.month|date:'Y-m' }}">{{ r.expenses|rs }}</a>{% else %}{{ r.expenses|rs }}{% endif %}</td>{% endif %}
+          <td class="money pe-3 fw-bold" style="color:{% if r.profit < 0 %}var(--red){% elif r.profit > 0 %}var(--green){% else %}var(--muted){% endif %}">{{ r.profit|rs }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><td class="ps-3">Total</td><td class="money">{{ totals.billed|rs }}</td><td class="money">{{ totals.received|rs }}</td><td class="money">{{ totals.salaries|rs }}</td>{% if show_exp %}<td class="money">{{ totals.expenses|rs }}</td>{% endif %}<td class="money pe-3">{{ totals.profit|rs }}</td></tr></tfoot>
+    </table>
+  </div>
+</section>
+<p class="small text-muted mt-2">“Fees billed” is what was due for that month; the difference from “received” is money still to collect (or paid for older months).</p>
+{{ chart|json_script:"profit-data" }}
+{% endblock %}
+{% block scripts %}
+<script>
+  const d = readData("profit-data");
+  new Chart(document.getElementById("profitChart"), {
+    data: { labels: d.labels, datasets: [
+      { type: "bar", label: "Fees received", data: d.received, backgroundColor: IFS.green, borderRadius: 3, order: 2 },
+      { type: "bar", label: "Salaries paid", data: d.salaries, backgroundColor: "#b9b5dd", borderRadius: 3, order: 2 },
+      {% if show_exp %}{ type: "bar", label: "Other expenses", data: d.expenses, backgroundColor: "#e0b45c", borderRadius: 3, order: 2 },{% endif %}
+      { type: "line", label: "Profit", data: d.profit, borderColor: IFS.indigo, backgroundColor: IFS.indigo, tension: 0, pointRadius: 3, order: 1 },
+    ] },
+    options: { plugins: { legend: { position: "bottom" }, tooltip: { callbacks: { label: (c) => c.dataset.label + ": Rs. " + c.parsed.y.toLocaleString("en-PK") } } },
+      scales: { y: { ticks: { callback: (v) => "Rs. " + v.toLocaleString("en-PK") } } } }
+  });
+</script>
+{% endblock %}

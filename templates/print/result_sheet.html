@@ -1,0 +1,28 @@
+{% extends "print/base_print.html" %}
+{% load office_tags %}
+{% block title %}Result sheet — {{ test.name }}{% endblock %}
+{% block head %}<style>@page { size: A4 {% if subjects|length > 6 %}landscape{% else %}portrait{% endif %}; margin: 8mm; } .sheet { {% if subjects|length > 6 %}width: 297mm;{% endif %} }</style>{% endblock %}
+{% block sheets %}
+<div class="sheet">
+  {% include "print/_head.html" with right=test.date|date:"d-m-Y" %}
+  <div class="doc-title">RESULT SHEET — {{ test.name|upper }} — {{ test.classroom.name|upper }}</div>
+  <table class="grid">
+    <thead><tr><th class="c">Pos.</th><th class="c">Roll</th><th>Student</th>{% for s in subjects %}<th class="n">{{ s.name }}<br><span class="small">/{{ s.full_marks|num }}</span></th>{% endfor %}<th class="n">Total<br><span class="small">/{{ rows.0.total|num }}</span></th><th class="n">%</th><th class="c">Grade</th><th>Remarks</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="c"><b>{% if r.position %}{{ r.position|ordinal }}{% endif %}</b></td>
+        <td class="c">{{ r.student.roll_no|default:"" }}</td>
+        <td>{{ r.student.name }}</td>
+        {% for s in subjects %}{% with m=r.marks|get_item:s.pk %}<td class="n">{% if m %}{% if m.absent %}Abs{% else %}{{ m.obtained|num }}{% endif %}{% endif %}</td>{% endwith %}{% endfor %}
+        <td class="n">{% if r.percent is not None %}{{ r.obtained|num }}{% endif %}</td>
+        <td class="n {% if r.percent is not None and not r.passed %}low{% endif %}">{{ r.percent|pct }}</td>
+        <td class="c">{% if r.percent is not None %}{{ r.grade }}{% endif %}</td>
+        <td class="small">{{ r.remark }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="sign" style="--cols:2"><div>Class teacher</div><div>Principal</div></div>
+</div>
+{% endblock %}

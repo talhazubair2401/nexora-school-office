@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+{% block body %}
+<main class="auth">
+  <section class="auth-brand" aria-label="{{ school.name }}">
+    <div class="auth-brand-inner">
+      <img class="auth-logo" src="{{ logo_url }}" alt="{{ school.name }} logo">
+      <h1 class="auth-school">{{ school.name|upper }}</h1>
+      {% if school.name_urdu %}<div class="auth-urdu" lang="ur">{{ school.name_urdu }}</div>{% endif %}
+      {% if school.motto %}<div class="auth-motto">{{ school.motto }}</div>{% endif %}
+      <div class="auth-clock"><div id="auth-time">{% now "h:i A" %}</div><div id="auth-date">{% now "l, j F Y" %}</div></div>
+      <p class="auth-quote">“Rabbi Zidni Ilma” — My Lord, increase me in knowledge</p>
+    </div>
+    <div class="auth-address">{{ school.address }}{% if school.phone %} · {{ school.phone }}{% endif %}</div>
+  </section>
+
+  <section class="auth-side {% block side_class %}{% endblock %}">
+    {% block side %}
+    <div class="auth-card">
+      {% block card %}{% endblock %}
+    </div>
+    {% endblock %}
+    <footer class="auth-maker">
+      <span class="small">Designed &amp; developed by</span>
+      <div class="maker-row">
+        {% if maker.logo %}<img src="{{ maker.logo }}" alt="">{% else %}<span class="maker-mark" aria-hidden="true">N</span>{% endif %}
+        <span class="maker-name">{{ maker.name }}</span>
+      </div>
+      {% if maker.email %}<span class="small maker-help"><i class="bi bi-envelope me-1"></i>Need help? <a href="mailto:{{ maker.email }}">{{ maker.email }}</a></span>{% endif %}
+    </footer>
+  </section>
+</main>
+<script>
+(function () {
+  const t = document.getElementById("auth-time"), d = document.getElementById("auth-date");
+  const tick = () => {
+    const n = new Date();
+    t.textContent = n.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true }).toUpperCase();
+    d.textContent = n.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  };
+  tick(); setInterval(tick, 15000);
+  const pw = document.querySelector("input[type=password]");
+  const eye = document.getElementById("show-pw"), caps = document.getElementById("caps");
+  if (eye) eye.addEventListener("click", () => {
+    document.querySelectorAll(".auth-card input[type=password], .auth-card input[data-pw]").forEach((i) => {
+      i.dataset.pw = "1"; i.type = i.type === "password" ? "text" : "password";
+    });
+    eye.querySelector("i").className = "bi " + (pw && pw.type === "text" ? "bi-eye-slash" : "bi-eye");
+  });
+  document.querySelectorAll(".auth-card input").forEach((i) => i.addEventListener("keyup", (e) => {
+    if (caps && e.getModifierState) caps.hidden = !e.getModifierState("CapsLock");
+  }));
+})();
+</script>
+{% endblock %}

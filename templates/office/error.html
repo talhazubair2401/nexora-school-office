@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block crumbs %}<span>{{ title }}</span>{% endblock %}
+{% block content %}
+<div class="panel empty">
+  <i class="bi bi-exclamation-circle"></i>
+  <h1 class="h4">{{ title }}</h1>
+  <p>{{ message }}</p>
+  <a class="btn btn-primary" href="{% url 'office:dashboard' %}">Go to Home</a>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Attendance{% endblock %}
+{% block crumbs %}<span>Attendance</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Attendance <span class="text-muted fw-normal fs-5">· {% if is_today %}Today, {% endif %}{{ day|date:"l j F Y" }}</span></h1>
+  <a class="btn btn-light" href="?date={{ prev_day|date:'Y-m-d' }}" aria-label="Previous day"><i class="bi bi-chevron-left"></i></a>
+  <form method="get" data-autosubmit><input class="form-control" type="date" name="date" value="{{ day|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" aria-label="Choose a date"></form>
+  {% if next_day %}<a class="btn btn-light" href="?date={{ next_day|date:'Y-m-d' }}" aria-label="Next day"><i class="bi bi-chevron-right"></i></a>{% endif %}
+  {% if not is_today %}<a class="btn btn-light" href="?">Today</a>{% endif %}
+</div>
+{% if is_sunday %}<div class="alert alert-info py-2"><i class="bi bi-info-circle me-1"></i>This day is a Sunday.</div>{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3"><div class="figure good"><span class="value">{{ students_present }} <small class="text-muted fs-6">/ {{ students_total }}</small></span><span class="label">Students present</span><span class="hint">{{ classes_done }} of {{ classes_with_students }} classes marked</span></div></div>
+  <div class="col-6 col-xl-3"><div class="figure {% if absent %}bad{% endif %}"><span class="value">{{ absent|length }}</span><span class="label">Absent or on leave</span><span class="hint">list below, with phone numbers</span></div></div>
+  <div class="col-6 col-xl-3"><a class="figure text-decoration-none" href="{% url 'office:teacher_attendance' %}?date={{ day|date:'Y-m-d' }}"><span class="value">{% if teachers_marked %}{{ teachers_present }} <small class="text-muted fs-6">/ {{ teachers_total }}</small>{% else %}–{% endif %}</span><span class="label">Teachers present</span><span class="hint">{% if teachers_marked %}{% for t in teachers_away %}{{ t.teacher.name }} ({{ t.get_status_display|lower }}){% if not forloop.last %}, {% endif %}{% empty %}everyone is here{% endfor %}{% else %}not marked yet{% endif %}</span></a></div>
+  <div class="col-6 col-xl-3 d-flex flex-column gap-2">
+    <a class="btn btn-indigo btn-lg flex-fill d-flex align-items-center justify-content-center" href="{% url 'office:teacher_attendance' %}?date={{ day|date:'Y-m-d' }}"><i class="bi bi-person-badge me-2"></i>Teacher attendance</a>
+    <a class="btn btn-light flex-fill d-flex align-items-center justify-content-center" href="{% url 'office:teacher_attendance_month' %}?month={{ day|date:'Y-m' }}">Teachers' monthly register</a>
+  </div>
+</div>
+
+<h2 class="h5 mb-2">Classes <span class="text-muted fw-normal small">— press a class to mark it</span></h2>
+<div class="row g-3 mb-4">
+  {% for x in classes %}{% if x.total %}
+  <div class="col-6 col-md-4 col-xl-3 col-xxl-2">
+    <a class="board att-board {% if x.done %}done{% endif %}" href="{% url 'office:attendance_mark' x.c.pk %}?date={{ day|date:'Y-m-d' }}">
+      <div class="band" style="background: {{ x.c.colour }}; color: {{ x.c.colour|text_on }}"><h3>{{ x.c.name }}</h3></div>
+      <div class="body">
+        {% if x.marked %}
+          <div class="count">{{ x.present }}<small class="text-muted fs-6"> / {{ x.total }}</small></div>
+          <div class="small">present{% if x.absent %} · <span class="text-danger fw-semibold">{{ x.absent }} absent</span>{% endif %}{% if x.leave %} · {{ x.leave }} leave{% endif %}</div>
+          <span class="att-done"><i class="bi bi-check-circle-fill"></i> {% if x.done %}Marked{% else %}Partly marked{% endif %}</span>
+        {% else %}
+          <div class="count text-muted">{{ x.total }}</div><div class="small">students</div>
+          <span class="att-todo"><i class="bi bi-circle"></i> Not marked yet</span>
+        {% endif %}
+      </div>
+    </a>
+  </div>
+  {% endif %}{% endfor %}
+</div>
+
+<section class="panel">
+  <div class="panel-head"><h2>Absent or on leave {% if is_today %}today{% else %}on {{ day|date:"d M" }}{% endif %}</h2><span class="small text-muted">Call the parents if needed</span></div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th class="ps-3">Student</th><th>Class</th><th>Father</th><th>Phone</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for a in absent %}
+        <tr><td class="ps-3"><a class="row-link" href="{{ a.student.get_absolute_url }}">{{ a.student.name }}</a></td><td>{{ a.student.classroom|default:"–" }}</td><td>{{ a.student.father_name|default:"–" }}</td>
+          <td>{% if a.student.phone %}<a href="tel:{{ a.student.phone }}">{{ a.student.phone }}</a>{% else %}–{% endif %}</td>
+          <td><span class="chip {% if a.status == 'A' %}chip-UNPAID{% else %}chip-PART{% endif %}">{{ a.get_status_display }}</span>
+            {% if access.owner and a.status == 'A' %}<a class="btn btn-sm btn-light ms-2" href="{% url 'office:charge_add' %}?student={{ a.student.pk }}&amp;kind=ABSENT">Fine</a>{% endif %}</td></tr>
+      {% empty %}
+        <tr><td colspan="5"><div class="empty"><i class="bi bi-emoji-smile"></i>{% if students_present %}Nobody is absent in the classes marked so far.{% else %}Nothing marked yet for this day.{% endif %}</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

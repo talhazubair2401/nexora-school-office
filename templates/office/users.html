@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Logins{% endblock %}
+{% block crumbs %}<span>Logins</span>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="page-title me-auto">Logins</h1>
+  <a class="btn btn-primary" href="{% url 'office:user_create' %}"><i class="bi bi-person-plus me-1"></i>Add office staff</a>
+</div>
+<p class="text-muted">Give each office worker their own login. They choose their name on the login screen and type their own password. Everything they do is written in <a href="{% url 'office:activity' %}">Recent activity</a> with their name.</p>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6 col-xl-4">
+    <section class="login-card-owner h-100">
+      <div class="d-flex align-items-center gap-3"><span class="who-dot big" aria-hidden="true">P</span><div><b class="d-block">Principal</b><small>Owner · full control</small></div></div>
+      <a class="btn btn-sm btn-outline-light mt-3" href="{% url 'office:change_password' %}"><i class="bi bi-key me-1"></i>Change my password</a>
+    </section>
+  </div>
+  {% for r in rows %}
+  <div class="col-md-6 col-xl-4">
+    <section class="panel panel-body h-100 {% if not r.u.is_active %}opacity-75{% endif %}">
+      <div class="d-flex align-items-center gap-3 mb-2"><span class="who-dot big staff" aria-hidden="true">{{ r.u.first_name|first|upper }}</span>
+        <div class="me-auto"><b class="d-block">{{ r.u.first_name }}</b><small class="text-muted">Office staff · {% if r.u.is_active %}{% if r.u.last_login %}last used {{ r.u.last_login|date:"d M, h:i A" }}{% else %}not used yet{% endif %}{% else %}<span class="text-danger">login turned off</span>{% endif %}</small></div></div>
+      <div class="small mb-3">{% for a in r.allowed %}<span class="chip chip-PAID me-1 mb-1 d-inline-block">{{ a }}</span>{% empty %}<span class="text-muted">Nothing switched on yet.</span>{% endfor %}</div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-sm btn-light" href="{% url 'office:user_edit' r.u.pk %}"><i class="bi bi-sliders me-1"></i>What can {{ r.u.first_name }} do? / password</a>
+        <form method="post" action="{% url 'office:user_toggle' r.u.pk %}">{% csrf_token %}<button class="btn btn-sm btn-light {% if r.u.is_active %}text-danger{% endif %}" type="submit">{% if r.u.is_active %}Turn off login{% else %}Turn login back on{% endif %}</button></form>
+      </div>
+    </section>
+  </div>
+  {% endfor %}
+</div>
+{% if not rows %}<div class="panel empty"><i class="bi bi-people"></i>No office staff logins yet. Only you can open the system for now.</div>{% endif %}
+
+<section class="panel panel-body mt-3">
+  <h2 class="h6 mb-2"><i class="bi bi-lock me-1"></i>Always owner only</h2>
+  <p class="small text-muted mb-0">Changing a fee or discount · cancelling or deleting a payment · deleting anything · salaries and teachers' records · profit and expenses · settings and backups · logins · the activity log. If staff try to open these, it is blocked and written in the activity log.</p>
+</section>
+{% endblock %}

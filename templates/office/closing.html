@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load office_tags %}
+{% block title %}Before you close{% endblock %}
+{% block crumbs %}<span>Before you close</span>{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-8 col-xl-7">
+  <section class="panel overflow-hidden">
+    <div class="closing-head">
+      <span class="closing-icon" aria-hidden="true"><i class="bi bi-hdd-fill"></i></span>
+      <div>
+        <h1 class="page-title mb-1" style="color:inherit">Back up before you close?</h1>
+        <div>{% if days is None %}No backup of the records has been made yet.{% else %}The last backup was <b>{{ days }} day{{ days|pluralize }} ago</b> ({{ school.last_backup_at|date:"d M Y" }}).{% endif %}
+          It takes a few seconds.</div>
+      </div>
+    </div>
+    <form method="post" action="{% url 'office:backup' %}" class="panel-body">{% csrf_token %}
+      <input type="hidden" name="then_lock" value="1">
+      {% if drives %}
+        <div class="alert alert-success py-2"><i class="bi bi-usb-drive me-1"></i>USB found: {% for d in drives %}<b>{{ d }}</b>{% if not forloop.last %}, {% endif %}{% endfor %}. The backup will be saved on it.</div>
+      {% else %}
+        <div class="alert alert-warning py-2"><i class="bi bi-usb-drive me-1"></i><b>Plug in your USB stick</b>, then press <b>Look again</b>. A backup on the same computer won't help if the computer breaks.</div>
+      {% endif %}
+      <label class="form-label" for="folder">Save the backup in this folder</label>
+      <div class="input-group">
+        <input class="form-control" id="folder" name="folder" value="{{ folder }}" placeholder="e.g. E:\School backups" required>
+        {% if is_windows %}<button class="btn btn-light" type="button" id="choose-folder"><i class="bi bi-folder2-open me-1"></i>Choose folder…</button>{% endif %}
+      </div>
+      {% if drives|length > 1 %}<div class="mt-2 small">{% for d in drives %}<button type="button" class="btn btn-sm btn-light me-1" data-folder="{{ d }}School backups"><i class="bi bi-usb-drive me-1"></i>{{ d }}</button>{% endfor %}</div>{% endif %}
+      <div class="d-flex flex-wrap gap-2 mt-4">
+        <button class="btn btn-primary btn-lg" type="submit"><i class="bi bi-hdd me-1"></i>Back up now and lock</button>
+        {% if not drives %}<a class="btn btn-light btn-lg" href="{% url 'office:closing' %}"><i class="bi bi-arrow-clockwise me-1"></i>Look again</a>{% endif %}
+      </div>
+    </form>
+    <div class="panel-body border-top d-flex flex-wrap align-items-center gap-2">
+      <form method="post" action="{% url 'office:logout' %}">{% csrf_token %}<input type="hidden" name="skip_backup" value="1">
+        <button class="btn btn-light" type="submit"><i class="bi bi-lock me-1"></i>Lock without a backup</button></form>
+      <a class="btn btn-light" href="{% url 'office:dashboard' %}">Cancel, keep working</a>
+      <span class="small text-muted ms-auto">This reminder comes back each week until a backup is made.</span>
+    </div>
+  </section>
+</div></div>
+{% endblock %}
+{% block scripts %}<script>
+(function () {
+  const input = document.getElementById("folder");
+  document.querySelectorAll("[data-folder]").forEach((b) => b.addEventListener("click", () => { input.value = b.dataset.folder; }));
+  const btn = document.getElementById("choose-folder");
+  if (btn) btn.addEventListener("click", () => {
+    btn.disabled = true;
+    const old = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Look for the window…';
+    fetch("{% url 'office:choose_folder' %}", { method: "POST", headers: { "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value } })
+      .then((r) => r.json()).then((d) => { if (d.folder) input.value = d.folder; else if (d.error) alert(d.error); })
+      .finally(() => { btn.disabled = false; btn.innerHTML = old; });
+  });
+  const form = input.form;
+  form.addEventListener("submit", () => {
+    const b = form.querySelector("button[type=submit]");
+    b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving the backup…';
+  });
+})();
+</script>{% endblock %}
